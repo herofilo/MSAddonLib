@@ -1,6 +1,10 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.0.8.6 (20190815):
+	- Weird gestures and gaits labelled as !?
+	- New processing flag List Weird Gestures/Gaits verbs (gesture animations for props)
+
 * v1.0.8 (20190815):
 	- Version set to be in sync with MSAddonChecker
 

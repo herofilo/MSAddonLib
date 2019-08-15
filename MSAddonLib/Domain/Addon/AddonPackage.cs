@@ -238,6 +238,8 @@ namespace MSAddonLib.Domain.Addon
 
         private bool ListGestureGaitsAnimationFiles { get; set; }
 
+        private bool ListWeirdGestureGaitVerbs { get; set; }
+
 
         // -----------------------------------------------------------------------------------------------
         // TODO : only arguments: pProcessingFlags pArchiver pTemporaryFolder
@@ -265,6 +267,7 @@ namespace MSAddonLib.Domain.Addon
 
             ListAllAnimationFiles = pProcessingFlags.HasFlag(ProcessingFlags.ListAllAnimationFiles);
             ListGestureGaitsAnimationFiles = pProcessingFlags.HasFlag(ProcessingFlags.ListGestureGaitsAnimations);
+            ListWeirdGestureGaitVerbs = pProcessingFlags.HasFlag(ProcessingFlags.ListWeirdGestureGaitsVerbs);
 
             if (!contentsSummary.HasAddonSignatureFile)
             {
@@ -855,7 +858,7 @@ namespace MSAddonLib.Domain.Addon
                 bool printHasVerbs = true;
                 if (VerbsSummary != null)
                 {
-                    string verbsSummaryText = VerbsSummary.ToString();
+                    string verbsSummaryText = VerbsSummary.WriteReport(ListWeirdGestureGaitVerbs);
                     if (!string.IsNullOrEmpty(verbsSummaryText))
                     {
                         summary.AppendLine("    Verbs:");

@@ -406,6 +406,10 @@ namespace MSAddonLib.Domain.Addon
 
             const string prefixPuppets = "data\\puppets\\";
             int prefixPuppetsLength = prefixPuppets.Length;
+
+            const string prefixProps = "data\\props\\";
+            int prefixPropsLength = prefixProps.Length;
+
             const string prefixAnimations = "animations\\";
 
             // List<string> animationFiles = new List<string>();
@@ -416,12 +420,26 @@ namespace MSAddonLib.Domain.Addon
                 string fileNameLower = item.FileName.ToLower();
                 if (fileNameLower.EndsWith(".caf"))
                 {
-                    string puppet = item.FileName.Remove(0, prefixPuppetsLength);
-                    int index = puppet.IndexOf("\\");
-                    puppet = puppet.Remove(index);
+                    string puppet;
+                    int index;
+                    bool weird = false;
+                    if (fileNameLower.StartsWith(prefixPuppets))
+                    {
+                        puppet = item.FileName.Remove(0, prefixPuppetsLength);
+                        index = puppet.IndexOf("\\");
+                    }
+                    else if (fileNameLower.StartsWith(prefixProps))
+                    {
+                        puppet = item.FileName.Remove(0, prefixPropsLength);
+                        index = puppet.IndexOf("\\animations", StringComparison.InvariantCultureIgnoreCase);
+                        weird = true;
+                    }
+                    else
+                        continue;
+                    puppet = puppet.Remove(index) + (weird ? "!?" : "");
                     index = fileNameLower.IndexOf(prefixAnimations);
                     string relativePath = fileNameLower.Remove(0, index + prefixAnimations.Length).Replace("\\", "/").Replace(".caf", "");
-                    animationFiles.Add(new Tuple<string, string>(relativePath, puppet));
+                    animationFiles.Add(new Tuple<string, string>(relativePath, puppet.Replace("\\", "/")));
                 }
             }
 
@@ -480,14 +498,10 @@ namespace MSAddonLib.Domain.Addon
 
 
 
-
-
-
-
         // ------------------------------------------------------------------------------------------------------------------
 
 
-        public override string ToString()
+        public string WriteReport(bool pListWeirdGestureGaits)
         {
             if (!_initialized || (Verbs == null) || !Verbs.HasData)
                 return "";
@@ -512,25 +526,43 @@ namespace MSAddonLib.Domain.Addon
             if (flags.HasFlag(VerbCollectionFlags.Gestures))
             {
                 textBuilder.AppendLine("Gestures:");
+                int weirdVerbs = 0;
                 foreach (VerbSummaryItem verb in Verbs.Gestures)
                 {
+                    if (!pListWeirdGestureGaits && verb.ModelA.EndsWith("!?"))
+                    {
+                        weirdVerbs++;
+                        continue;
+                    }
+
                     string text = (verb.Iterations == 1)
                         ? $"    [{verb.ModelA}] : {verb.VerbName}"
                         : $"    [{verb.ModelA}] : {verb.VerbName}    (x{verb.Iterations})";
                     textBuilder.AppendLine(text);
                 }
+                if (weirdVerbs > 0)
+                    textBuilder.AppendLine($"    {weirdVerbs} Improper Gestures (for Props)");
             }
 
             if (flags.HasFlag(VerbCollectionFlags.Gaits))
             {
                 textBuilder.AppendLine("Gaits:");
+                int weirdVerbs = 0;
                 foreach (VerbSummaryItem verb in Verbs.Gaits)
                 {
+                    if (!pListWeirdGestureGaits && verb.ModelA.EndsWith("!?"))
+                    {
+                        weirdVerbs++;
+                        continue;
+                    }
+
                     string text = (verb.Iterations == 1)
                         ? $"    [{verb.ModelA}] : {verb.VerbName}"
                         : $"    [{verb.ModelA}] : {verb.VerbName}    (x{verb.Iterations})";
                     textBuilder.AppendLine(text);
                 }
+                if (weirdVerbs > 0)
+                    textBuilder.AppendLine($"    {weirdVerbs} Improper Gestures (for Props)");
             }
 
             if (flags.HasFlag(VerbCollectionFlags.PropSoloVerbs))
