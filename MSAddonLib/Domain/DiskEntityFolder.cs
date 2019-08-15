@@ -5,9 +5,9 @@ using MSAddonLib.Persistence;
 
 namespace MSAddonLib.Domain
 {
-    public class AssetFolder : AssetBase, IAsset
+    public class DiskEntityFolder : DiskEntityBase, IDiskEntity
     {
-        public AssetFolder(string pAssetPath, IReportWriter pReportWriter) : base(pAssetPath, pReportWriter)
+        public DiskEntityFolder(string pEntityPath, IReportWriter pReportWriter) : base(pEntityPath, pReportWriter)
         {
         }
 
@@ -15,11 +15,11 @@ namespace MSAddonLib.Domain
         // ------------------------------------------------------------------------------------------
 
 
-        public bool CheckAsset(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
+        public bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
         {
             if (IsAddonFolder())
             {
-                new AssetAddonFolder(AssetPath, ReportWriter).CheckAsset(pProcessingFlags);
+                new DiskEntityAddonFolder(EntityPath, ReportWriter).CheckEntity(pProcessingFlags);
                 return true;
             }
 
@@ -27,7 +27,7 @@ namespace MSAddonLib.Domain
             ReportWriter.IncreaseReportLevel();
 
             string report;
-            bool checkOk = CheckAsset(pProcessingFlags, out report);
+            bool checkOk = CheckEntity(pProcessingFlags, out report);
 
             ReportWriter.DecreaseReportLevel();
             ReportWriter.WriteReportLineFeed("");
@@ -35,7 +35,7 @@ namespace MSAddonLib.Domain
         }
 
 
-        private bool CheckAsset(ProcessingFlags pProcessingFlags, out string pReport)
+        private bool CheckEntity(ProcessingFlags pProcessingFlags, out string pReport)
         {
             pReport = null;
 
@@ -43,14 +43,14 @@ namespace MSAddonLib.Domain
             // bool showAddonContents = pProcessingFlags.HasFlag(ProcessingFlags.ShowAddonContents);
 
 
-            DirectoryInfo directoryInfo = new DirectoryInfo(AssetPath);
+            DirectoryInfo directoryInfo = new DirectoryInfo(EntityPath);
 
             FileInfo[] addonInfoList = directoryInfo.GetFiles("*.addon", SearchOption.TopDirectoryOnly);
             
 
             foreach (FileInfo item in addonInfoList)
             {
-                new AssetAddon(item.FullName, ReportWriter).CheckAsset(pProcessingFlags);
+                new DiskEntityAddon(item.FullName, ReportWriter).CheckEntity(pProcessingFlags);
             }
 
 
@@ -58,7 +58,7 @@ namespace MSAddonLib.Domain
 
             foreach (FileInfo item in sketchupInfoList)
             {
-                new AssetSketchup(item.FullName, ReportWriter).CheckAsset(pProcessingFlags);
+                new DiskEntitySketchup(item.FullName, ReportWriter).CheckEntity(pProcessingFlags);
             }
 
 
@@ -70,7 +70,7 @@ namespace MSAddonLib.Domain
 
             foreach (FileInfo item in archiveInfoList)
             {
-                new AssetArchive(item.FullName, ReportWriter).CheckAsset(pProcessingFlags);
+                new DiskEntityArchive(item.FullName, ReportWriter).CheckEntity(pProcessingFlags);
             }
 
 
@@ -79,7 +79,7 @@ namespace MSAddonLib.Domain
             {
                 foreach (DirectoryInfo subdirectoryInfo in subdirectories)
                 {
-                    new AssetFolder(subdirectoryInfo.FullName, ReportWriter).CheckAsset(pProcessingFlags);
+                    new DiskEntityFolder(subdirectoryInfo.FullName, ReportWriter).CheckEntity(pProcessingFlags);
                 }
             }
 
@@ -90,9 +90,9 @@ namespace MSAddonLib.Domain
 
         private bool IsAddonFolder()
         {
-            return File.Exists(Path.Combine(AssetPath, AddonPackage.SignatureFilename)) &&
-                   File.Exists(Path.Combine(AssetPath, AddonPackage.AssetDataFilename)) &&
-                   Directory.Exists(Path.Combine(AssetPath, "Data"));
+            return File.Exists(Path.Combine(EntityPath, AddonPackage.SignatureFilename)) &&
+                   File.Exists(Path.Combine(EntityPath, AddonPackage.AssetDataFilename)) &&
+                   Directory.Exists(Path.Combine(EntityPath, "Data"));
 
 
         }

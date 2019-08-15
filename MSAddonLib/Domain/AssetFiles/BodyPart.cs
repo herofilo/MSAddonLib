@@ -106,9 +106,48 @@ namespace MSAddonLib.Domain.AssetFiles
 
 
         /// <summary>
+        /// Creates a BodyPart instance from an existent description file
+        /// </summary>
+        /// <param name="pFilename">Path to the bodypart description file</param>
+        /// <param name="pErrorText">Text of error, if any</param>
+        /// <returns>Bodypart instance, or null if error</returns>
+        public static BodyPart Load(string pFilename, out string pErrorText)
+        {
+            pErrorText = null;
+            if (!File.Exists(pFilename))
+            {
+                pErrorText = "BodyPart.Load(): File not found";
+                return null;
+            }
+
+            BodyPart bodyPart = new BodyPart();
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(bodyPart.GetType());
+                using (StreamReader reader = new StreamReader(pFilename))
+                {
+                    bodyPart = (BodyPart)serializer.Deserialize(reader);
+                    reader.Close();
+                }
+            }
+            catch (Exception exception)
+            {
+                pErrorText = $"EXCEPTION while deserializing BodyPart: {exception.Message} - {exception.InnerException?.Message}";
+                bodyPart = null;
+            }
+
+            return bodyPart;
+        }
+
+
+
+
+        /// <summary>
         /// Creates a BodyPart instance from a XML string
         /// </summary>
         /// <param name="pText">XML string</param>
+        /// <param name="pErrorText">Text of error, if any</param>
         /// <returns>BodyPart instance, or null if error</returns>
         public static BodyPart LoadFromString(string pText, out string pErrorText)
         {

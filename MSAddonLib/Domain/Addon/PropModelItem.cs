@@ -3,7 +3,7 @@ using System.Xml.Serialization;
 
 namespace MSAddonLib.Domain.Addon
 {
-    public class PropModelItem
+    public sealed class PropModelItem
     {
         // <tags/>
         [XmlArray("templates")]

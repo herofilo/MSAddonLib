@@ -1,6 +1,9 @@
 ﻿namespace MSAddonLib.Domain
 {
-    public enum AssetType
+    /// <summary>
+    /// Type of disk entity
+    /// </summary>
+    public enum DiskEntityType
     {
         Unknown,
         AddonFile,

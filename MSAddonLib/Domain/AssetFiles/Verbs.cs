@@ -90,10 +90,48 @@ namespace MSAddonLib.Domain.AssetFiles
             set { this.mutualVerbField = value; }
         }
 
+
+        /// <summary>
+        /// Creates a Verbs instance from an existent Verbs file
+        /// </summary>
+        /// <param name="pFilename">Path to the Verbs file</param>
+        /// <param name="pErrorText">Text of error, if any</param>
+        /// <returns>Verbs instance, or null if error</returns>
+        public static Verbs Load(string pFilename, out string pErrorText)
+        {
+            pErrorText = null;
+            if (!File.Exists(pFilename))
+            {
+                pErrorText = "Verbs.Load(): File not found";
+                return null;
+            }
+
+            Verbs verbs = new Verbs();
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(verbs.GetType());
+                using (StreamReader reader = new StreamReader(pFilename))
+                {
+                    verbs = (Verbs)serializer.Deserialize(reader);
+                    reader.Close();
+                }
+            }
+            catch (Exception exception)
+            {
+                pErrorText = $"EXCEPTION while deserializing Verbs: {exception.Message} - {exception.InnerException?.Message}";
+                verbs = null;
+            }
+
+            return verbs;
+        }
+
+
         /// <summary>
         /// Creates a Verbs instance from a XML string
         /// </summary>
         /// <param name="pText">XML string</param>
+        /// <param name="pErrorText">Text of error, if any</param>
         /// <returns>Verbs instance, or null if error</returns>
         public static Verbs LoadFromString(string pText, out string pErrorText)
         {

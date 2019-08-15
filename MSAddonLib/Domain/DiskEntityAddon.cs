@@ -7,9 +7,9 @@ using SevenZip;
 
 namespace MSAddonLib.Domain
 {
-    public class AssetAddon : AssetBase, IAsset
+    public class DiskEntityAddon : DiskEntityBase, IDiskEntity
     {
-        public AssetAddon(string pAssetPath, IReportWriter pReportWriter) : base(pAssetPath, pReportWriter)
+        public DiskEntityAddon(string pEntityPath, IReportWriter pReportWriter) : base(pEntityPath, pReportWriter)
         {
         }
 
@@ -17,10 +17,10 @@ namespace MSAddonLib.Domain
         // ---------------------------------------------------------------------------
 
         // TODO - Print report
-        public bool CheckAsset(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
+        public bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
         {
             string report;
-            bool checkOk = CheckAsset(pProcessingFlags, out report);
+            bool checkOk = CheckEntity(pProcessingFlags, out report);
             
             pNamePrinted = string.IsNullOrEmpty(pNamePrinted) ? Name : Name + pNamePrinted;
 
@@ -43,7 +43,7 @@ namespace MSAddonLib.Domain
 
 
 
-        private bool CheckAsset(ProcessingFlags pProcessingFlags, out string pReport)
+        private bool CheckEntity(ProcessingFlags pProcessingFlags, out string pReport)
         {
             bool reportOnlyIssues = pProcessingFlags.HasFlag(ProcessingFlags.JustReportIssues);
             bool showAddonContents = pProcessingFlags.HasFlag(ProcessingFlags.ShowAddonContents);

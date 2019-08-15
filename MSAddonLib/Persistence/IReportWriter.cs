@@ -2,6 +2,8 @@
 {
     public interface IReportWriter
     {
+        string Text { get; }
+
         int ReportLevel { get;  }
 
         void IncreaseReportLevel();

@@ -12,7 +12,7 @@ namespace MSAddonLib.Domain.Addon
     /// <summary>
     /// Detailed information about a addon package
     /// </summary>
-    public class AddonPackage
+    public sealed class AddonPackage
     {
         /// <summary>
         /// Name of the signature file of the addon. It contains information about:<br/>
@@ -61,6 +61,12 @@ namespace MSAddonLib.Domain.Addon
         private const double BytesPerMegabyte = 1024.0 * 1024.0;
 
         // ------------------------------------------------------------------------------------------------------------------------------------
+
+
+        public AddonPackageSource SourceType { get; private set; }
+
+        public string Source { get; private set; }
+
 
         /// <summary>
         /// Name of the addon
@@ -230,6 +236,8 @@ namespace MSAddonLib.Domain.Addon
         /// </summary>
         private readonly List<ArchiveFileInfo> _addonFileList = null;
 
+        private string ReportText { get; set; }
+
         /// <summary>
         /// Forces listing of all animation files (.caf) in the addon.<br/>
         /// By default, it only lists the name of the animation files for the gestures and gaits, for they are only defined in the StateMachine file and determining what puppets they apply to is a complex task.
@@ -240,9 +248,10 @@ namespace MSAddonLib.Domain.Addon
 
         private bool ListWeirdGestureGaitVerbs { get; set; }
 
+        private SevenZipArchiver Archiver { get; set; }
+
 
         // -----------------------------------------------------------------------------------------------
-        // TODO : only arguments: pProcessingFlags pArchiver pTemporaryFolder
         /// <summary>
         /// Full information about the addon
         /// </summary>
@@ -256,12 +265,18 @@ namespace MSAddonLib.Domain.Addon
                 throw new Exception("Not a valid archiver");
             }
 
+            SourceType = AddonPackageSource.Archiver;
+            if (pArchiver.Source == SevenZipArchiverSource.File)
+                Source = pArchiver.ArchiveName;
+
             if (pArchiver.ArchivedFileList(out _addonFileList) < 0)
             {
                 throw new Exception($"Error extracting the list of archived files: {pArchiver.LastErrorText}");
             }
 
+            Archiver = pArchiver;
 
+            LoadAddonPackage(pProcessingFlags, pTemporaryFolder);
 
             CheckContentsInFileResult contentsSummary = CheckContentsInFileList(_addonFileList);
 
@@ -333,6 +348,133 @@ namespace MSAddonLib.Domain.Addon
 
 
 
+        /// <summary>
+        /// Full information about the addon
+        /// </summary>
+        /// <param name="pProcessingFlags">Processing flags</param>
+        /// <param name="pFolderPath">Path of the folder containing the addon</param>
+        /// <param name="pTemporaryFolder">Path to the root temporary folder</param>
+        public AddonPackage(ProcessingFlags pProcessingFlags, string pFolderPath, string pTemporaryFolder)
+        {
+            if (string.IsNullOrEmpty(pFolderPath = pFolderPath.Trim()))
+            {
+                throw new Exception("Not a valid folder specification");
+            }
+
+            string folderPath = (Path.IsPathRooted(pFolderPath)) ? pFolderPath : Path.GetFullPath(pFolderPath);
+            if (!Directory.Exists(folderPath))
+            {
+                throw new Exception("Folder not found");
+            }
+
+            SourceType = AddonPackageSource.Folder;
+            Source = folderPath;
+
+            LoadAddonPackage(pProcessingFlags, pTemporaryFolder);
+
+
+
+        }
+
+
+        private bool LoadAddonPackage(ProcessingFlags pProcessingFlags, string pTemporaryFolder)
+        {
+            bool isFolderAddon = SourceType == AddonPackageSource.Folder;
+
+            ListAllAnimationFiles = pProcessingFlags.HasFlag(ProcessingFlags.ListAllAnimationFiles);
+            ListGestureGaitsAnimationFiles = pProcessingFlags.HasFlag(ProcessingFlags.ListGestureGaitsAnimations);
+            ListWeirdGestureGaitVerbs = pProcessingFlags.HasFlag(ProcessingFlags.ListWeirdGestureGaitsVerbs);
+
+            CheckContentsInFileResult contentsSummary =
+                isFolderAddon
+                    ? CheckContentsInFileList(Source)
+                    : CheckContentsInFileList(_addonFileList);
+
+            if (!contentsSummary.HasAddonSignatureFile)
+            {
+                throw new Exception("No Addon Signature file (.AddOn)");
+            }
+            if (!contentsSummary.HasAssetDataFile)
+            {
+                throw new Exception("No Addon AssetData file (assetData.jar)");
+            }
+
+            HasVerbs = contentsSummary.HasVerbs;
+
+            if (isFolderAddon)
+            {
+                RetrieveAddonSignatureInfo(Source);
+
+                try
+                {
+                    RetrieveAssetManifest(Source, pTemporaryFolder);
+                }
+                catch (Exception exception)
+                {
+                    _issuesStringBuilder.AppendLine(exception.Message);
+                }
+
+                RetrieveVersionInfo(Source);
+                RetrievePropertiesInfo(Source);
+            }
+            else
+            {
+                RetrieveAddonSignatureInfo(Archiver);
+
+                try
+                {
+                    RetrieveAssetManifest(Archiver, pTemporaryFolder);
+                }
+                catch (Exception exception)
+                {
+                    _issuesStringBuilder.AppendLine(exception.Message);
+                }
+
+                RetrieveVersionInfo(Archiver);
+                RetrievePropertiesInfo(Archiver);
+            }
+
+            MeshDataSizeMbytes = GetMeshDataSize();
+
+            HasCal3DMeshFiles = contentsSummary.HasCal3DMeshFiles;
+
+            HasDataFolder = contentsSummary.HasDataContents;
+            DemoMovies = contentsSummary.DemoMovies;
+            StockAssets = contentsSummary.StockAssets;
+
+            HasThumbnail = (GetArchivedFileFullName(ThumbnailFilename) != null);
+
+            HasStateMachine = contentsSummary.HasStateMachine;
+
+            if (HasVerbs || HasStateMachine)
+            {
+                string errorText;
+                VerbsSummary = 
+                    isFolderAddon ? new VerbsSummary(Source) : new VerbsSummary(Archiver);
+                if (!VerbsSummary.PopulateSummary(out errorText))
+                {
+                    // Ignore at this moment
+                    // throw new Exception(errorText);
+                }
+            }
+
+
+            Sounds = GetSounds(contentsSummary.SoundFiles);
+
+            Filters = GetFilters(contentsSummary.FilterFiles);
+
+            SpecialEffects = GetSpecialEffects(contentsSummary.SpecialEffects);
+
+            Materials = isFolderAddon 
+                ? GetMaterials(Source, contentsSummary.MaterialsFiles)
+                : GetMaterials(Archiver, contentsSummary.MaterialsFiles);
+
+            SkyTextures = GetSkies(contentsSummary.SkyFiles);
+
+            return true;
+        }
+
+
         private CheckContentsInFileResult CheckContentsInFileList(List<ArchiveFileInfo> pFileList)
         {
             CheckContentsInFileResult result = new CheckContentsInFileResult();
@@ -398,7 +540,7 @@ namespace MSAddonLib.Domain.Addon
                 if (filename.StartsWith(@"movies\"))
                 {
                     string[] parts = item.FileName.Split("\\".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-                    
+
                     if (parts.Length > 1)
                     {
                         string movieName = parts[1];
@@ -492,6 +634,177 @@ namespace MSAddonLib.Domain.Addon
             return result;
         }
 
+
+        private CheckContentsInFileResult CheckContentsInFileList(string pRootPath)
+        {
+            CheckContentsInFileResult result = new CheckContentsInFileResult();
+
+            string prefix = pRootPath.ToLower();
+            if (!prefix.EndsWith("\\"))
+                prefix += "\\";
+            int prefixLen = prefix.Length;
+
+            foreach (string fileName in Directory.EnumerateFiles(pRootPath, "*", SearchOption.AllDirectories))
+            {
+                string relativePath = fileName;
+                string filenameLower = fileName.ToLower();
+                if (filenameLower.StartsWith(prefix))
+                {
+                    filenameLower = fileName.Remove(0, prefixLen);
+                    relativePath = relativePath.Remove(0, prefixLen);
+                }
+
+
+                if (filenameLower == ".addon")
+                {
+                    result.HasAddonSignatureFile = true;
+                    continue;
+                }
+
+                if (filenameLower == "assetdata.jar")
+                {
+                    result.HasAssetDataFile = true;
+                    continue;
+                }
+
+                if (filenameLower == "version.xml")
+                {
+                    result.HasVersionFile = true;
+                    continue;
+                }
+
+                if (filenameLower == ".properties")
+                {
+                    result.HasPropertiesFile = true;
+                    continue;
+                }
+
+                if (filenameLower == "thumbnail.jpg")
+                {
+                    result.HasThumbnail = true;
+                    continue;
+                }
+
+                if (!result.HasDataContents && filenameLower.StartsWith("data\\") && !filenameLower.EndsWith("data\\"))
+                    result.HasDataContents = true;
+
+                if (filenameLower.EndsWith("verbs"))
+                {
+                    result.HasVerbs = true;
+                    continue;
+                }
+                if (filenameLower.EndsWith("statemachine"))
+                {
+                    result.HasStateMachine = true;
+                    continue;
+                }
+
+                /*
+                if (filename.Contains("\\props\\") && filename.EndsWith(".caf"))
+                {
+                    if (result.PropAnimations == null)
+                        result.PropAnimations = new List<string>();
+                    result.PropAnimations.Add(item.FileName);
+                    continue;
+                }
+                */
+
+                if (filenameLower.StartsWith(@"movies\"))
+                {
+                    string[] parts = relativePath.Split("\\".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+
+                    if (parts.Length > 1)
+                    {
+                        string movieName = parts[1];
+                        if (!string.IsNullOrEmpty(movieName))
+                        {
+                            if (result.DemoMovies == null)
+                                result.DemoMovies = new List<string>();
+                            else
+                            {
+                                if (result.DemoMovies.Contains(movieName))
+                                    continue;
+                            }
+
+                            result.DemoMovies.Add(movieName);
+                        }
+                    }
+                    continue;
+                }
+
+                if (filenameLower.StartsWith(@"stock\"))
+                {
+                    string[] parts = relativePath.Split("\\".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 1)
+                    {
+                        string stockName = parts[1];
+                        if (!string.IsNullOrEmpty(stockName))
+                        {
+                            if (result.StockAssets == null)
+                                result.StockAssets = new List<string>();
+                            else
+                            {
+                                if (result.StockAssets.Contains(stockName))
+                                    continue;
+                            }
+
+                            result.StockAssets.Add(stockName);
+                        }
+                    }
+                    continue;
+                }
+
+                if (filenameLower.EndsWith(".cmf"))
+                {
+                    result.HasCal3DMeshFiles = true;
+                    continue;
+                }
+
+                if (filenameLower.StartsWith("data\\sound\\") /* && !fileName.IsDirectory */)
+                {
+                    if (result.SoundFiles == null)
+                        result.SoundFiles = new List<string>();
+                    result.SoundFiles.Add(relativePath);
+                    continue;
+                }
+
+                if (filenameLower.StartsWith("data\\cuttingroom\\filters\\") /* && !fileName.IsDirectory */)
+                {
+                    string path = Path.GetDirectoryName(relativePath);
+                    if (result.FilterFiles == null)
+                        result.FilterFiles = new List<string>();
+                    if (!result.FilterFiles.Contains(path))
+                        result.FilterFiles.Add(path);
+                    continue;
+                }
+
+                if (filenameLower.StartsWith("data\\sky\\") && /* !fileName.IsDirectory && */ !filenameLower.Contains("_preview"))
+                {
+                    if (result.SkyFiles == null)
+                        result.SkyFiles = new List<string>();
+                    result.SkyFiles.Add(relativePath);
+                    continue;
+                }
+
+                if (filenameLower.EndsWith("materials.materials"))
+                {
+                    if (result.MaterialsFiles == null)
+                        result.MaterialsFiles = new List<string>();
+                    result.MaterialsFiles.Add(relativePath);
+                    continue;
+                }
+
+                if (filenameLower.EndsWith(".mps"))
+                {
+                    if (result.SpecialEffects == null)
+                        result.SpecialEffects = new List<string>();
+                    result.SpecialEffects.Add(relativePath);
+                }
+
+            }
+
+            return result;
+        }
 
 
         private string GetArchivedFileFullName(string pSearch)
@@ -665,6 +978,9 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
+        // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
         private List<string> GetSkies(List<string> pSkyFiles)
         {
             if ((pSkyFiles == null) || (pSkyFiles.Count == 0))
@@ -745,6 +1061,9 @@ namespace MSAddonLib.Domain.Addon
 
         public override string ToString()
         {
+            if (ReportText != null)
+                return ReportText;
+
             StringBuilder summary = new StringBuilder();
             summary.AppendLine(string.Format("    Name: {0}", Name));
             // summary.AppendLine(string.Format("FriendlyName: {0}", _friendlyName));
@@ -848,7 +1167,7 @@ namespace MSAddonLib.Domain.Addon
 
             if (HasVerbs || HasStateMachine)
             {
-                if(HasVerbs && HasStateMachine)
+                if (HasVerbs && HasStateMachine)
                     summary.AppendLine("    Has StateMachine and Verbs files");
                 else if (HasStateMachine)
                     summary.AppendLine("    Has StateMachine file");
@@ -884,7 +1203,7 @@ namespace MSAddonLib.Domain.Addon
 
             AppendMiscList(summary, SkyTextures, "Sky Textures");
 
-            return summary.ToString();
+            return (ReportText = summary.ToString());
         }
 
 
@@ -901,6 +1220,13 @@ namespace MSAddonLib.Domain.Addon
 
 
 
+    }
+
+
+    public enum AddonPackageSource
+    {
+        Folder,
+        Archiver
     }
 
 

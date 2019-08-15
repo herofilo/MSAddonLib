@@ -1,6 +1,12 @@
 
 MSAddonLib - Version History
 --------------------------------
+
+	- Domain\Asset* classes renamed to DiskEntity*
+	- IReportWriter new property Text
+	- New IReportWriter class: StringReportWriter
+	- Direct support of addon folders [WIP]
+
 * v1.0.8.6 (20190815):
 	- Weird gestures and gaits labelled as !?
 	- New processing flag List Weird Gestures/Gaits verbs (gesture animations for props)

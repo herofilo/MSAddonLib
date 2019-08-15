@@ -2,7 +2,7 @@
 
 namespace MSAddonLib.Domain.Addon
 {
-    public class ModelPart
+    public sealed class ModelPart
     {
         [XmlElement("slot")]
         public int Slot { get; set; }

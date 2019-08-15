@@ -103,10 +103,49 @@ namespace MSAddonLib.Domain.AssetFiles
         }
 
 
+
+        /// <summary>
+        /// Creates a PropModelDescriptor instance from an existent prop DESCRIPTOR file
+        /// </summary>
+        /// <param name="pFilename">Path to the prop DESCRIPTOR file</param>
+        /// <param name="pErrorText">Text of error, if any</param>
+        /// <returns>PropModelDescriptor instance, or null if error</returns>
+        public static PropModelDescriptor Load(string pFilename, out string pErrorText)
+        {
+            pErrorText = null;
+            if (!File.Exists(pFilename))
+            {
+                pErrorText = "PropModelDescriptor.Load(): File not found";
+                return null;
+            }
+
+            PropModelDescriptor propModelDescriptor = new PropModelDescriptor();
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(propModelDescriptor.GetType());
+                using (StreamReader reader = new StreamReader(pFilename))
+                {
+                    propModelDescriptor = (PropModelDescriptor)serializer.Deserialize(reader);
+                    reader.Close();
+                }
+            }
+            catch (Exception exception)
+            {
+                pErrorText = $"EXCEPTION while deserializing PropModelDescriptor: {exception.Message} - {exception.InnerException?.Message}";
+                propModelDescriptor = null;
+            }
+
+            return propModelDescriptor;
+        }
+
+
+
         /// <summary>
         /// Creates a PropModelDescriptor instance from a XML string
         /// </summary>
         /// <param name="pText">XML string</param>
+        /// <param name="pErrorText">Text of error, if any</param>
         /// <returns>PropModelDescriptor instance, or null if error</returns>
         public static PropModelDescriptor LoadFromString(string pText, out string pErrorText)
         {

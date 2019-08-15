@@ -12,7 +12,7 @@ namespace MSAddonLib.Domain.Addon
     /// Info in the Signature file of the addon (.Addon)
     /// </summary>
     [XmlRoot("addon")]
-    public class AddonSignatureFile
+    public sealed class AddonSignatureFile
     {
         /// <summary>
         /// DescriptionFilePath of the addon
@@ -47,7 +47,7 @@ namespace MSAddonLib.Domain.Addon
 
         // .......................................................................................
 
-
+        // TODO : añadir out pErrorText, en vez de exception
         /// <summary>
         /// Loads the signature file
         /// </summary>

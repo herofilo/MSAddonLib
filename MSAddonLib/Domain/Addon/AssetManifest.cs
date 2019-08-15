@@ -5,7 +5,7 @@ using System.Xml.Serialization;
 
 namespace MSAddonLib.Domain.Addon
 {
-    public class AssetManifest
+    public sealed class AssetManifest
     {
         [XmlArray("propModels")]
         [XmlArrayItem("Prop")]

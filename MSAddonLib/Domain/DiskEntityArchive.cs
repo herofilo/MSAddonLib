@@ -7,23 +7,23 @@ using SevenZip;
 
 namespace MSAddonLib.Domain
 {
-    public class AssetArchive : AssetBase, IAsset
+    public class DiskEntityArchive : DiskEntityBase, IDiskEntity
     {
-        public AssetArchive(string pAssetPath, IReportWriter pReportWriter) : base(pAssetPath, pReportWriter)
+        public DiskEntityArchive(string pEntityPath, IReportWriter pReportWriter) : base(pEntityPath, pReportWriter)
         {
         }
 
         // -------------------------------------------------------------------------------------------
 
         // TODO - Print report
-        public bool CheckAsset(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
+        public bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
         {
 
             ReportWriter.WriteReportLineFeed($"+{Name} : ");
             ReportWriter.IncreaseReportLevel();
 
             string report;
-            bool checkOk = CheckAsset(pProcessingFlags, out report);
+            bool checkOk = CheckEntity(pProcessingFlags, out report);
 
             if (!string.IsNullOrEmpty(report))
             {
@@ -39,7 +39,7 @@ namespace MSAddonLib.Domain
 
 
 
-        private bool CheckAsset(ProcessingFlags pProcessingFlags, out string pReport)
+        private bool CheckEntity(ProcessingFlags pProcessingFlags, out string pReport)
         {
             // bool reportOnlyIssues = pProcessingFlags.HasFlag(ProcessingFlags.JustReportIssues);
             // bool showAddonContents = pProcessingFlags.HasFlag(ProcessingFlags.ShowAddonContents);
@@ -115,12 +115,12 @@ namespace MSAddonLib.Domain
                         isAddonFile = true;
                     }
 
-                    IAsset asset =
+                    IDiskEntity diskEntity =
                         isAddonFile
-                        ? new AssetAddon(addonFile, ReportWriter)
-                        : (IAsset) new AssetSketchup(addonFile, ReportWriter);
+                        ? new DiskEntityAddon(addonFile, ReportWriter)
+                        : (IDiskEntity) new DiskEntitySketchup(addonFile, ReportWriter);
 
-                    asset.CheckAsset(pProcessingFlags);
+                    diskEntity.CheckEntity(pProcessingFlags);
 
                     File.Delete(addonFile);
                 }

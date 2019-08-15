@@ -6,17 +6,17 @@ using SevenZip;
 
 namespace MSAddonLib.Domain
 {
-    public sealed class AssetAddonFolder : AssetBase, IAsset
+    public sealed class DiskEntityAddonFolder : DiskEntityBase, IDiskEntity
     {
-        public AssetAddonFolder(string pAssetPath, IReportWriter pReportWriter) : base(pAssetPath, pReportWriter)
+        public DiskEntityAddonFolder(string pEntityPath, IReportWriter pReportWriter) : base(pEntityPath, pReportWriter)
         {
         }
 
 
-        public bool CheckAsset(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
+        public bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
         {
             string report;
-            return CheckAsset(pProcessingFlags, out report);
+            return CheckEntity(pProcessingFlags, out report);
 
             /*
             if (checkOk && pProcessingFlags.HasFlag(ProcessingFlags.JustReportIssues))
@@ -36,11 +36,11 @@ namespace MSAddonLib.Domain
         }
 
 
-        private bool CheckAsset(ProcessingFlags pProcessingFlags, out string pReport)
+        private bool CheckEntity(ProcessingFlags pProcessingFlags, out string pReport)
         {
             pReport = null;
 
-            string fileName = Path.GetFileNameWithoutExtension(AssetPath) + ".addon";
+            string fileName = Path.GetFileNameWithoutExtension(EntityPath) + ".addon";
             string tempAddonArchive = Path.Combine(Utils.GetTempDirectory(), fileName);
             try
             {
@@ -51,7 +51,7 @@ namespace MSAddonLib.Domain
 
                     return false;
                 }
-                new AssetAddon(tempAddonArchive, ReportWriter).CheckAsset(pProcessingFlags, " (Installed)");
+                new DiskEntityAddon(tempAddonArchive, ReportWriter).CheckEntity(pProcessingFlags, " (Installed)");
             }
             catch
             {
