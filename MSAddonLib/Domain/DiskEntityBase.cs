@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using MSAddonLib.Domain.Addon;
 using MSAddonLib.Persistence;
 
 namespace MSAddonLib.Domain
@@ -78,7 +79,10 @@ namespace MSAddonLib.Domain
                     
                 } else if (Directory.Exists(pEntityPath))
                 {
-                    diskEntityType = DiskEntityType.Folder;
+                    diskEntityType = 
+                        DiskEntityFolder.IsAddonFolder(pEntityPath) 
+                            ? DiskEntityType.AddonFolder 
+                            : DiskEntityType.Folder;
                 }
                 else
                 {
@@ -97,6 +101,13 @@ namespace MSAddonLib.Domain
             return diskEntityType;
         }
 
+
+        public static bool IsAddonFolder(string pEntityPath)
+        {
+            return File.Exists(Path.Combine(pEntityPath, AddonPackage.SignatureFilename)) &&
+                   File.Exists(Path.Combine(pEntityPath, AddonPackage.AssetDataFilename)) &&
+                   Directory.Exists(Path.Combine(pEntityPath, "Data"));
+        }
 
     }
 }

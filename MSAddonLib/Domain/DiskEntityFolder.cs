@@ -17,7 +17,7 @@ namespace MSAddonLib.Domain
 
         public bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
         {
-            if (IsAddonFolder())
+            if (IsAddonFolder(EntityPath))
             {
                 new DiskEntityAddonFolder(EntityPath, ReportWriter).CheckEntity(pProcessingFlags);
                 return true;
@@ -82,19 +82,8 @@ namespace MSAddonLib.Domain
                     new DiskEntityFolder(subdirectoryInfo.FullName, ReportWriter).CheckEntity(pProcessingFlags);
                 }
             }
-
-
-
             return true;
         }
 
-        private bool IsAddonFolder()
-        {
-            return File.Exists(Path.Combine(EntityPath, AddonPackage.SignatureFilename)) &&
-                   File.Exists(Path.Combine(EntityPath, AddonPackage.AssetDataFilename)) &&
-                   Directory.Exists(Path.Combine(EntityPath, "Data"));
-
-
-        }
     }
 }

@@ -18,6 +18,9 @@ namespace MSAddonLib.Domain
                 case DiskEntityType.Folder:
                     diskEntity = new DiskEntityFolder(pEntityPath, pReportWriter);                   
                     break;
+                case DiskEntityType.AddonFolder:
+                    diskEntity = new DiskEntityAddonFolder(pEntityPath, pReportWriter);
+                    break;
                 case DiskEntityType.Archive:
                     diskEntity = new DiskEntityArchive(pEntityPath, pReportWriter);                    
                     break;

@@ -9,6 +9,7 @@
         AddonFile,
         Archive,
         Folder,
+        AddonFolder,
         SketchupFile 
     }
 }
