@@ -6,7 +6,7 @@ namespace MSAddonLib.Domain
     {
         // ----------------------------------------------------------------------------------------------
 
-        public static IDiskEntity GetEntity(string pEntityPath, IReportWriter pReportWriter)
+        public static IDiskEntity GetEntity(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter)
         {
             IDiskEntity diskEntity = null;
 
@@ -16,19 +16,19 @@ namespace MSAddonLib.Domain
             switch (DiskEntityBase.GetEntityType(pEntityPath))
             {
                 case DiskEntityType.Folder:
-                    diskEntity = new DiskEntityFolder(pEntityPath, pReportWriter);                   
+                    diskEntity = new DiskEntityFolder(pEntityPath, pInsideArchive, pReportWriter);                   
                     break;
                 case DiskEntityType.AddonFolder:
-                    diskEntity = new DiskEntityAddonFolder(pEntityPath, pReportWriter);
+                    diskEntity = new DiskEntityAddonFolder(pEntityPath, pInsideArchive, pReportWriter);
                     break;
                 case DiskEntityType.Archive:
-                    diskEntity = new DiskEntityArchive(pEntityPath, pReportWriter);                    
+                    diskEntity = new DiskEntityArchive(pEntityPath, pInsideArchive, pReportWriter);                    
                     break;
                 case DiskEntityType.SketchupFile:
-                    diskEntity = new DiskEntitySketchup(pEntityPath, pReportWriter);
+                    diskEntity = new DiskEntitySketchup(pEntityPath, pInsideArchive, pReportWriter);
                     break;
                 case DiskEntityType.AddonFile:
-                    diskEntity = new DiskEntityAddon(pEntityPath, pReportWriter);                    
+                    diskEntity = new DiskEntityAddon(pEntityPath, pInsideArchive, pReportWriter);                    
                     break;
             }
 

@@ -27,12 +27,14 @@ namespace TestRun
             Console.WriteLine($"Entity Path: {_diskEntity}");
 
             StringReportWriter writer = new StringReportWriter();
-            IDiskEntity entity = DiskEntityHelper.GetEntity(_diskEntity, writer);
+            IDiskEntity entity = DiskEntityHelper.GetEntity(_diskEntity, false, writer);
             Console.WriteLine($"Entity Type: {entity.DiskEntityType}");
 
             bool result = entity.CheckEntity(_processingFlags);
             Console.WriteLine($"CheckEntity() result: {result}");
+            string output = entity.ToString();
             Console.WriteLine(writer.Text);
+            Console.WriteLine("-------------");
 
             Console.Write("Press for finish");
             Console.ReadKey();
@@ -87,6 +89,17 @@ namespace TestRun
                         _processingFlags |= ProcessingFlags.ListWeirdGestureGaitsVerbs;
                         continue;
                     }
+                    if (argLower == "-listcompactdupverbsbyname" || argLower == "-lcdv")
+                    {
+                        _processingFlags |= ProcessingFlags.ListCompactDupVerbsByName;
+                        continue;
+                    }
+                    if (argLower == "-correctdisguisedfiles" || argLower == "-cdf")
+                    {
+                        _processingFlags |= ProcessingFlags.CorrectDisguisedFiles;
+                        continue;
+                    }
+
                     continue;
                 }
 

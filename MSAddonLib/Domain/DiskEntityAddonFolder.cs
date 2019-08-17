@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using MSAddonLib.Domain.Addon;
 using MSAddonLib.Persistence;
 using MSAddonLib.Util;
 using MSAddonLib.Util.Persistence;
@@ -9,7 +10,7 @@ namespace MSAddonLib.Domain
     // TODO : Rewrite for direct support
     public sealed class DiskEntityAddonFolder : DiskEntityBase, IDiskEntity
     {
-        public DiskEntityAddonFolder(string pEntityPath, IReportWriter pReportWriter) : base(pEntityPath, pReportWriter)
+        public DiskEntityAddonFolder(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
         {
         }
 
@@ -42,8 +43,12 @@ namespace MSAddonLib.Domain
         {
             pReport = null;
 
-            new DiskEntityAddon(EntityPath, ReportWriter).CheckEntity(pProcessingFlags, " (Installed)");
+            string tempPath = Utils.GetTempDirectory();
 
+
+            AddonPackage package = new AddonPackage(AbsolutePath, pProcessingFlags, tempPath);
+
+            pReport = package?.ToString();
 
             return true;
         }

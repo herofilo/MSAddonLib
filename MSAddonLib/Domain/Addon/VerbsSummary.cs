@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using MSAddonLib.Domain.AssetFiles;
@@ -13,9 +14,17 @@ namespace MSAddonLib.Domain.Addon
 
         public const string VerbsFilename = "Data\\Verbs";
 
+        public const string StateMachineFilename = "Data\\StateMachine";
+
+        private const string CriteriumStringModelA = "modelA";
+
+        private const string CriteriumStringModelB = "modelB";
+
         public VerbCollection Verbs { get; private set; }
 
-        private SevenZipArchiver Archiver { get; set; }
+        public AddonPackageSource AddonSource { get; private set; }
+
+        public bool CompactDupVerbsByName { get; private set; }
 
 
         private bool _initialized = false;
@@ -27,31 +36,32 @@ namespace MSAddonLib.Domain.Addon
 
         }
 
-        public VerbsSummary(SevenZipArchiver pArchiver)
+        public VerbsSummary(AddonPackageSource pSource, bool pCompactDupVerbsByName)
         {
 
-            Archiver = pArchiver;
+            AddonSource = pSource;
+            CompactDupVerbsByName = pCompactDupVerbsByName;
         }
 
 
         // ---------------------------------------------------------------------------------------------------------
 
 
-        public bool PopulateSummary(out string pErrorText, SevenZipArchiver pArchiver = null)
+        public bool PopulateSummary(out string pErrorText, AddonPackageSource pSource = null)
         {
             pErrorText = null;
             if (_initialized)
                 return true;
 
-            if (!PopulateSummaryPreChecks(ref pArchiver, out pErrorText))
+            if (!PopulateSummaryPreChecks(ref pSource, out pErrorText))
                 return false;
 
             bool isOk = true;
             try
             {
                 VerbCollection verbCollection = new VerbCollection();
-                verbCollection = CreateVerbsSummary(pArchiver, verbCollection, out pErrorText);
-                Verbs = CreateVerbsSummaryFromStateMachine(pArchiver, verbCollection);
+                verbCollection = CreateVerbsSummary(verbCollection, out pErrorText);
+                Verbs = CreateVerbsSummaryFromStateMachine(verbCollection);
             }
             catch (Exception exception)
             {
@@ -67,39 +77,62 @@ namespace MSAddonLib.Domain.Addon
 
 
 
-        private bool PopulateSummaryPreChecks(ref SevenZipArchiver pArchiver, out string pErrorText)
+        private bool PopulateSummaryPreChecks(ref AddonPackageSource pSource, out string pErrorText)
         {
             pErrorText = null;
-            if (pArchiver == null)
+            if (pSource == null)
             {
-                if (Archiver == null)
+                if (AddonSource == null)
                 {
-                    pErrorText = "No archiver specification";
+                    pErrorText = "No addon source specification";
                     return false;
                 }
 
-                pArchiver = Archiver;
+                pSource = AddonSource;
             }
             else
-                Archiver = pArchiver;
+                AddonSource = pSource;
+
+            if (AddonSource.SourceType == AddonPackageSourceType.Invalid)
+            {
+                pErrorText = "Invalid addon source";
+                return false;
+            }
 
             return true;
         }
 
 
-        private VerbCollection CreateVerbsSummary(SevenZipArchiver pArchiver, VerbCollection pVerbCollection, out string pErrorText)
+        private VerbCollection CreateVerbsSummary(VerbCollection pVerbCollection, out string pErrorText)
         {
             pErrorText = null;
-            
-            string verbsContents = pArchiver.ExtractArchivedFileToString(VerbsFilename);
+
+            string verbsContents = null;
+
+            switch (AddonSource.SourceType)
+            {
+                case AddonPackageSourceType.Archiver:
+                    verbsContents = AddonSource.Archiver.ExtractArchivedFileToString(VerbsFilename);
+                    if (verbsContents == null)
+                    {
+                        if (!AddonSource.Archiver.FileExists(VerbsFilename))
+                        {
+                            return pVerbCollection;
+                        }
+                        pErrorText = AddonSource.Archiver.LastErrorText;
+                        return pVerbCollection;
+                    }
+                    break;
+                case AddonPackageSourceType.Folder:
+                    string verbsFile = Path.Combine(AddonSource.SourcePath, VerbsFilename);
+                    if (!File.Exists(verbsFile))
+                        return pVerbCollection;
+                    verbsContents = File.ReadAllText(verbsFile);
+                    break;
+            }
+
             if (verbsContents == null)
             {
-                if (!pArchiver.FileExists(VerbsFilename))
-                {
-                    return pVerbCollection;
-                }
-
-                pErrorText = pArchiver.LastErrorText;
                 return pVerbCollection;
             }
 
@@ -132,18 +165,25 @@ namespace MSAddonLib.Domain.Addon
                 verb.ModelA = verbDescriptor.model;
                 verb.SetSortKey(verb.ModelA, verb.VerbName);
                 VerbSummaryItem oldItem = SearchEntry(puppetSoloVerbs, verb.SortKey);
-                if(oldItem == null)
+                if (oldItem == null)
                     puppetSoloVerbs.Add(verb);
                 else
                     oldItem.Iterations++;
-                
+
             }
+
+
+            if (CompactDupVerbsByName)
+            {
+                puppetSoloVerbs = CompactVerbs(puppetSoloVerbs, CriteriumStringModelA, null);
+            }
+
             pVerbCollection.PuppetSoloVerbs = puppetSoloVerbs.OrderBy(o => o.SortKey).ToList();
         }
 
         private VerbSummaryItem SearchEntry(List<VerbSummaryItem> pVerbsList, string pVerbKey)
         {
-            foreach(VerbSummaryItem verb in pVerbsList)
+            foreach (VerbSummaryItem verb in pVerbsList)
                 if (verb.SortKey == pVerbKey)
                     return verb;
             return null;
@@ -170,6 +210,7 @@ namespace MSAddonLib.Domain.Addon
 
 
             }
+
             pVerbCollection.PropSoloVerbs = propSoloVerbs.OrderBy(o => o.SortKey).ToList();
         }
 
@@ -202,8 +243,16 @@ namespace MSAddonLib.Domain.Addon
                 else
                     oldItem.Iterations++;
             }
+
+            if (CompactDupVerbsByName)
+            {
+                heldPropsVerbs = CompactVerbs(heldPropsVerbs, CriteriumStringModelB, CriteriumStringModelA);
+            }
+
             pVerbCollection.HeldPropsVerbs = heldPropsVerbs.OrderBy(o => o.SortKey).ToList();
         }
+
+
 
         private void AppendInteractivePropVerbs(VerbCollection pVerbCollection, vectorPropVerb[] pVerbs)
         {
@@ -226,6 +275,12 @@ namespace MSAddonLib.Domain.Addon
                 else
                     oldItem.Iterations++;
             }
+
+            if (CompactDupVerbsByName)
+            {
+                interactivePropsVerbs = CompactVerbs(interactivePropsVerbs, CriteriumStringModelB, CriteriumStringModelA);
+            }
+
             pVerbCollection.InteractivePropsVerbs = interactivePropsVerbs.OrderBy(o => o.SortKey).ToList();
         }
 
@@ -276,20 +331,41 @@ namespace MSAddonLib.Domain.Addon
                 }
             }
 
+            if (CompactDupVerbsByName)
+            {
+                puppetMutualVerbs = CompactVerbs(puppetMutualVerbs, CriteriumStringModelA, CriteriumStringModelB);
+            }
+
             pVerbCollection.PuppetMutualVerbs = puppetMutualVerbs.OrderBy(o => o.SortKey).ToList();
         }
 
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-        private VerbCollection CreateVerbsSummaryFromStateMachine(SevenZipArchiver pArchiver, VerbCollection pVerbCollection)
+        private VerbCollection CreateVerbsSummaryFromStateMachine(VerbCollection pVerbCollection)
         {
-            string stateMachineFilePath = "Data\\StateMachine";
-            string stateMachineContents = pArchiver.ExtractArchivedFileToString(stateMachineFilePath);
-            if (stateMachineContents == null)
+            string stateMachineFilePath;
+            string stateMachineContents = null;
+            switch (AddonSource.SourceType)
             {
-                return pVerbCollection;
+                case AddonPackageSourceType.Archiver:
+                    stateMachineFilePath = StateMachineFilename;
+                    stateMachineContents = AddonSource.Archiver.ExtractArchivedFileToString(stateMachineFilePath);
+                    if (stateMachineContents == null)
+                    {
+                        return pVerbCollection;
+                    }
+                    break;
+                case AddonPackageSourceType.Folder:
+                    stateMachineFilePath = Path.Combine(AddonSource.SourcePath, StateMachineFilename);
+                    if (!File.Exists(stateMachineFilePath))
+                        return pVerbCollection;
+                    stateMachineContents = File.ReadAllText(stateMachineFilePath);
+                    break;
             }
+
+            if (string.IsNullOrEmpty(stateMachineContents))
+                return pVerbCollection;
 
             string errorText;
             StateMachine stateMachine = StateMachine.LoadFromString(stateMachineContents, out errorText);
@@ -338,11 +414,10 @@ namespace MSAddonLib.Domain.Addon
                             gaitAnimation.VerbType = "Gait Animation";
 
                             if (animationFiles == null)
-                                animationFiles = GetAnimationFiles(pArchiver);
+                                animationFiles = GetAnimationFiles();
                             gaitAnimation.ModelA = GetAnimationPuppetModel(animationFilepath, animationFiles);
 
-
-                            gaitAnimation.SetSortKey(gaitAnimation.VerbName);
+                            gaitAnimation.SetSortKey(gaitAnimation.ModelA, gaitAnimation.VerbName);
                             if (gaits == null)
                                 gaits = new List<VerbSummaryItem>();
 
@@ -372,10 +447,10 @@ namespace MSAddonLib.Domain.Addon
 
                         string animationFilepath = transition.name;
                         if (animationFiles == null)
-                            animationFiles = GetAnimationFiles(pArchiver);
+                            animationFiles = GetAnimationFiles();
                         gestureAnimation.ModelA = GetAnimationPuppetModel(animationFilepath, animationFiles);
 
-                        gestureAnimation.SetSortKey(gestureAnimation.VerbName);
+                        gestureAnimation.SetSortKey(gestureAnimation.ModelA, gestureAnimation.VerbName);
                         if (gestures == null)
                             gestures = new List<VerbSummaryItem>();
 
@@ -388,7 +463,13 @@ namespace MSAddonLib.Domain.Addon
                 }
             }
 
-            if(gaits != null)
+            if (CompactDupVerbsByName)
+            {
+                gaits = CompactVerbs(gaits, CriteriumStringModelA, null);
+                gestures = CompactVerbs(gestures, CriteriumStringModelA, null);
+            }
+
+            if (gaits != null)
                 pVerbCollection.Gaits = gaits.OrderBy(o => o.SortKey).ToList();
             if (gestures != null)
                 pVerbCollection.Gestures = gestures.OrderBy(o => o.SortKey).ToList();
@@ -397,12 +478,184 @@ namespace MSAddonLib.Domain.Addon
 
 
 
-        private List<Tuple<string, string>> GetAnimationFiles(SevenZipArchiver pArchiver)
+        private List<VerbSummaryItem> CompactVerbs(List<VerbSummaryItem> pVerbs, string pCriterium0, string pCriterium1)
         {
-            List<ArchiveFileInfo> archiveFileInfos;
-            pArchiver.ArchivedFileList(out archiveFileInfos);
-            if ((archiveFileInfos == null) || (archiveFileInfos.Count == 0))
+            if (pVerbs == null)
                 return null;
+            if (pVerbs.Count == 0)
+                return pVerbs;
+
+            List< VerbSummaryItem > outputList = new List<VerbSummaryItem>();
+            while (pVerbs.Count > 0)
+            {
+                List<int> compactIndexes = new List<int>();
+                string verbName = null;
+                for(int index = pVerbs.Count - 1; index >= 0; --index)
+                {
+                    VerbSummaryItem verb = pVerbs[index];
+                    if (verbName == null)
+                        verbName = verb.VerbName.ToLower();
+                    else
+                    {
+                        if (verb.VerbName.ToLower() != verbName)
+                            continue;
+                    }
+
+                    compactIndexes.Add(index);
+                }
+
+                if (compactIndexes.Count == 1)
+                {
+                    outputList.Add(pVerbs[pVerbs.Count - 1]);
+                    pVerbs.RemoveAt(pVerbs.Count - 1);
+                    continue;
+                }
+                
+                outputList.Add(CompactVerb(pVerbs, compactIndexes, pCriterium0, pCriterium1));
+                foreach(int index in compactIndexes)
+                    pVerbs.RemoveAt(index);
+            }
+            return outputList.OrderBy(o => o.SortKey).ToList();
+        }
+
+        private VerbSummaryItem CompactVerb(List<VerbSummaryItem> pVerbs, List<int> pCompactIndexes, string pCriterium0, string pCriterium1)
+        {
+            VerbSummaryItem verb = new VerbSummaryItem()
+            {
+                VerbName = pVerbs[pCompactIndexes[0]].VerbName,
+                VerbType = pVerbs[pCompactIndexes[0]].VerbType,
+                Iterations = 0
+            };
+
+            List<string> criterium0Values = new List<string>();
+            List<string> criterium1Values = new List<string>();
+
+            for (int count = 0; count < pCompactIndexes.Count; ++count)
+            {
+                int verbIndex = pCompactIndexes[count];
+                VerbSummaryItem dupVerb = pVerbs[verbIndex];
+                if(dupVerb.Iterations > verb.Iterations)
+                    verb.Iterations = dupVerb.Iterations;
+
+                string criteriumValue0 = GetCriteriumValue(dupVerb, pCriterium0);
+                if((criteriumValue0 != null) && (!criterium0Values.Contains(criteriumValue0)))
+                    criterium0Values.Add(criteriumValue0);
+
+                string criteriumValue1 = GetCriteriumValue(dupVerb, pCriterium1);
+                if ((criteriumValue1 != null) && (!criterium1Values.Contains(criteriumValue1)))
+                    criterium1Values.Add(criteriumValue1);
+            }
+
+            string newCriterium0Value = SetNewCriteriumValue(verb, pCriterium0, criterium0Values);
+            string newCriterium1Value = SetNewCriteriumValue(verb, pCriterium1, criterium1Values);
+
+            SetSortKey(verb, newCriterium0Value, newCriterium1Value);
+
+            return verb;
+        }
+
+
+        private void SetSortKey(VerbSummaryItem pVerb, string pValue0, string pValue1)
+        {
+            if (pValue0 == null)
+            {
+                if(pValue1 == null)
+                    pVerb.SetSortKey(pVerb.VerbName);
+                else
+                {
+                    pVerb.SetSortKey(pValue1, pVerb.VerbName);
+                }
+            }
+            else
+            {
+                if (pValue1 == null)
+                    pVerb.SetSortKey(pValue0, pVerb.VerbName);
+                else
+                {
+                    pVerb.SetSortKey(pValue0, pValue1, pVerb.VerbName);
+                }
+            }
+        }
+
+
+        private string SetNewCriteriumValue(VerbSummaryItem pVerb, string pCriterium, List<string> pCriteriumValues)
+        {
+            if (pCriterium == null)
+                return null;
+
+            string newCriteriumValue = (pCriteriumValues.Count ==  1) 
+                    ? pCriteriumValues[0]
+                    : GetNewCriteriumValues(pCriteriumValues);
+
+            if (pCriterium == CriteriumStringModelA)
+                pVerb.ModelA = newCriteriumValue;
+            else if (pCriterium == CriteriumStringModelB)
+                pVerb.ModelB = newCriteriumValue;
+
+            return newCriteriumValue;
+        }
+
+
+
+        private string GetNewCriteriumValues(List<string> pCriteriumValues)
+        {
+            if (pCriteriumValues.Count == 1)
+                return pCriteriumValues[0];
+            if (pCriteriumValues.Contains("*"))
+                return "*";
+            if (pCriteriumValues.Contains("Male01") && pCriteriumValues.Contains("Female01"))
+                return "*";
+
+            StringBuilder valueBuilder = new StringBuilder();
+            foreach (string value in pCriteriumValues)
+                valueBuilder.Append($"{value} ");
+
+            return valueBuilder.ToString().Trim();
+        }
+
+
+        private string GetCriteriumValue(VerbSummaryItem pVerb, string pCriterium)
+        {
+            if ((pVerb == null) || (pCriterium == null))
+                return null;
+
+            if (pCriterium == CriteriumStringModelA)
+                return pVerb.ModelA;
+            if (pCriterium == CriteriumStringModelB)
+                return pVerb.ModelB;
+
+            return null;
+        }
+
+
+        private List<Tuple<string, string>> GetAnimationFiles()
+        {
+            List<string> candidateFiles = new List<string>();
+            switch (AddonSource.SourceType)
+            {
+                case AddonPackageSourceType.Archiver:
+                    List<ArchiveFileInfo> archiveFileInfos;
+                    AddonSource.Archiver.ArchivedFileList(out archiveFileInfos);
+                    if ((archiveFileInfos == null) || (archiveFileInfos.Count == 0))
+                        return null;
+                    foreach (ArchiveFileInfo item in archiveFileInfos)
+                        candidateFiles.Add(item.FileName);
+                    break;
+                case AddonPackageSourceType.Folder:
+                    string prefix = AddonSource.SourcePath.ToLower();
+                    if (!prefix.EndsWith("\\"))
+                        prefix += "\\";
+                    foreach (string file in Directory.EnumerateFiles(AddonSource.SourcePath, "*",
+                        SearchOption.AllDirectories))
+                    {
+                        string relativePath = (file.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase))
+                            ? file.Remove(0, prefix.Length)
+                            : file;
+                        candidateFiles.Add(relativePath);
+                    }
+
+                    break;
+            }
 
             const string prefixPuppets = "data\\puppets\\";
             int prefixPuppetsLength = prefixPuppets.Length;
@@ -415,9 +668,9 @@ namespace MSAddonLib.Domain.Addon
             // List<string> animationFiles = new List<string>();
 
             List<Tuple<string, string>> animationFiles = new List<Tuple<string, string>>();
-            foreach (ArchiveFileInfo item in archiveFileInfos)
+            foreach (string item in candidateFiles)
             {
-                string fileNameLower = item.FileName.ToLower();
+                string fileNameLower = item.ToLower();
                 if (fileNameLower.EndsWith(".caf"))
                 {
                     string puppet;
@@ -425,19 +678,19 @@ namespace MSAddonLib.Domain.Addon
                     bool weird = false;
                     if (fileNameLower.StartsWith(prefixPuppets))
                     {
-                        puppet = item.FileName.Remove(0, prefixPuppetsLength);
-                        index = puppet.IndexOf("\\");
+                        puppet = item.Remove(0, prefixPuppetsLength);
+                        index = puppet.IndexOf("\\", StringComparison.CurrentCultureIgnoreCase);
                     }
                     else if (fileNameLower.StartsWith(prefixProps))
                     {
-                        puppet = item.FileName.Remove(0, prefixPropsLength);
+                        puppet = item.Remove(0, prefixPropsLength);
                         index = puppet.IndexOf("\\animations", StringComparison.InvariantCultureIgnoreCase);
                         weird = true;
                     }
                     else
                         continue;
                     puppet = puppet.Remove(index) + (weird ? "!?" : "");
-                    index = fileNameLower.IndexOf(prefixAnimations);
+                    index = fileNameLower.IndexOf(prefixAnimations, StringComparison.InvariantCultureIgnoreCase);
                     string relativePath = fileNameLower.Remove(0, index + prefixAnimations.Length).Replace("\\", "/").Replace(".caf", "");
                     animationFiles.Add(new Tuple<string, string>(relativePath, puppet.Replace("\\", "/")));
                 }
@@ -484,7 +737,7 @@ namespace MSAddonLib.Domain.Addon
                 return puppets[0];
             if (puppets.Count == 2)
             {
-                if(((puppets[0] == "Male01") && (puppets[1] == "Female01")) ||
+                if (((puppets[0] == "Male01") && (puppets[1] == "Female01")) ||
                     ((puppets[1] == "Male01") && (puppets[0] == "Female01")))
                     return "*";
             }
@@ -648,7 +901,7 @@ namespace MSAddonLib.Domain.Addon
                 if ((PropSoloVerbs != null) && (PropSoloVerbs.Count > 0))
                     flags |= VerbCollectionFlags.PropSoloVerbs;
 
-                if((PuppetSoloVerbs != null) && (PuppetSoloVerbs.Count > 0))
+                if ((PuppetSoloVerbs != null) && (PuppetSoloVerbs.Count > 0))
                     flags |= VerbCollectionFlags.PuppetSoloVerbs;
 
                 if ((HeldPropsVerbs != null) && (HeldPropsVerbs.Count > 0))

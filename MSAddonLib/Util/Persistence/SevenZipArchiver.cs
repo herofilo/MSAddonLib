@@ -157,7 +157,7 @@ namespace MSAddonLib.Util.Persistence
 
 
 
-        private SevenZipExtractor GetExtractor()
+        public SevenZipExtractor GetExtractor()
         {
             if (Source == SevenZipArchiverSource.File)
             {

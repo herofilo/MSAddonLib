@@ -22,6 +22,11 @@
         /// </summary>
         string Name { get; }
 
+        /// <summary>
+        /// The entity is inside an archive
+        /// </summary>
+        bool InsideArchive { get; }
+
         // --------------------------------------------------------------------------
 
         bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null);

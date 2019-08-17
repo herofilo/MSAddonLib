@@ -2,10 +2,26 @@
 MSAddonLib - Version History
 --------------------------------
 
+* v1.1.0 (20190817):
 	- Domain\Asset* classes renamed to DiskEntity*
 	- IReportWriter new property Text
 	- New IReportWriter class: StringReportWriter
-	- Direct support of addon folders [WIP]
+	- Fixed a bug with the Gestures/Gaits seach criteria
+	- Direct support of addon folders
+	- PuppetSummary:
+		If no animation files at all, no Animations section is listed
+	- VerbSummary:
+		Optionally compact the list of verbs by name
+	- New classes:
+		AddonPackageSource
+		AddonPackageSourceType (enum)
+		PersistenceUtils
+	- New processing flags:
+		ListCompactDupVerbsByName
+		CorrectDisguisedFiles
+		CorrectDisguisedFilesDeleteSource
+	- Restoration of addons disguised as archives
+	- Checked a condition in which a StateMachine file exists but no animation files are found
 
 * v1.0.8.6 (20190815):
 	- Weird gestures and gaits labelled as !?

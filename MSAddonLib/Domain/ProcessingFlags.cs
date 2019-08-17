@@ -10,6 +10,9 @@ namespace MSAddonLib.Domain
         ShowAddonContents = 0x0002,
         ListAllAnimationFiles = 0x0004,
         ListGestureGaitsAnimations = 0x0008,
-        ListWeirdGestureGaitsVerbs = 0x0010
+        ListWeirdGestureGaitsVerbs = 0x0010,
+        ListCompactDupVerbsByName = 0x0020,
+        CorrectDisguisedFiles = 0x1000,
+        CorrectDisguisedFilesDeleteSource = 0x2000
     }
 }

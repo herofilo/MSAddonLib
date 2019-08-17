@@ -11,7 +11,7 @@ namespace MSAddonLib.Domain.Addon
     {
         public PropModelSumProps Props { get; private set; }
 
-        private SevenZipArchiver Archiver { get; set; }
+        public AddonPackageSource AddonSource { get; private set; }
 
         private string TempFolderPath { get; set; }
 
@@ -31,40 +31,47 @@ namespace MSAddonLib.Domain.Addon
 
         }
 
-        public PropModelsSummary(SevenZipArchiver pArchiver, string pTempFolderPath, List<PropModelItem> pPropModelItems, bool pLoadAnimations = true)
+        public PropModelsSummary(AddonPackageSource pSource, string pTempFolderPath, List<PropModelItem> pPropModelItems, bool pLoadAnimations = true)
         {
 
-            Archiver = pArchiver;
+            AddonSource = pSource;
             TempFolderPath = pTempFolderPath?.Trim();
             PropModelItems = pPropModelItems;
             LoadAnimations = pLoadAnimations;
         }
 
-
         // ---------------------------------------------------------------------------------------------------------
 
 
-        public bool PopulateSummary(out string pErrorText, SevenZipArchiver pArchiver = null, string pTempFolderPath = null, List<PropModelItem> pPropModelItems = null)
+        public bool PopulateSummary(out string pErrorText, AddonPackageSource pSource = null, string pTempFolderPath = null, List<PropModelItem> pPropModelItems = null)
         {
             pErrorText = null;
             if (_initialized)
                 return true;
 
-            if (!PopulateSummaryPreChecks(ref pArchiver, ref pTempFolderPath, ref pPropModelItems, out pErrorText))
+            if (!PopulateSummaryPreChecks(ref pSource, ref pTempFolderPath, ref pPropModelItems, out pErrorText))
                 return false;
 
             bool isOk = true;
-            string mftFile = Path.Combine(pTempFolderPath, AddonPackage.AssetDataFilename);
+            string assetDataFile = null;
+            bool deleteTempAssetDataFile = false;
             try
             {
-                pArchiver.ArchivedFilesExtract(pTempFolderPath, new List<string>() { AddonPackage.AssetDataFilename });
+                if (pSource.SourceType == AddonPackageSourceType.Folder)
+                    assetDataFile = Path.Combine(pSource.SourcePath, AddonPackage.AssetDataFilename);
+                else
+                {
+                    assetDataFile = Path.Combine(pTempFolderPath, AddonPackage.AssetDataFilename);
+                    pSource.Archiver.ArchivedFilesExtract(pTempFolderPath, new List<string>() { AddonPackage.AssetDataFilename });
+                    deleteTempAssetDataFile = true;
+                }
 
-                SevenZipArchiver mftArchiver = new SevenZipArchiver(mftFile);
+                SevenZipArchiver assetDataArchiver = new SevenZipArchiver(assetDataFile);
 
                 foreach (PropModelItem item in pPropModelItems)
                 {
                     if (Props == null)
-                        Props = new PropModelSumProps(mftArchiver);
+                        Props = new PropModelSumProps(assetDataArchiver);
 
                     if (!Props.AppendBodyModelItem(item, out pErrorText))
                     {
@@ -80,7 +87,8 @@ namespace MSAddonLib.Domain.Addon
             }
             finally
             {
-                File.Delete(mftFile);
+                if (deleteTempAssetDataFile)
+                    File.Delete(assetDataFile);
             }
 
             _initialized = isOk;
@@ -89,21 +97,27 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
-        private bool PopulateSummaryPreChecks(ref SevenZipArchiver pArchiver, ref string pTempFolderPath, ref List<PropModelItem> pPropModelItems, out string pErrorText)
+        private bool PopulateSummaryPreChecks(ref AddonPackageSource pSource, ref string pTempFolderPath, ref List<PropModelItem> pPropModelItems, out string pErrorText)
         {
             pErrorText = null;
-            if (pArchiver == null)
+            if (pSource == null)
             {
-                if (Archiver == null)
+                if (AddonSource == null)
                 {
-                    pErrorText = "No archiver specification";
+                    pErrorText = "No addon source specification";
                     return false;
                 }
 
-                pArchiver = Archiver;
+                pSource = AddonSource;
             }
             else
-                Archiver = pArchiver;
+                AddonSource = pSource;
+
+            if (AddonSource.SourceType == AddonPackageSourceType.Invalid)
+            {
+                pErrorText = "Invalid addon source";
+                return false;
+            }
 
             pTempFolderPath = pTempFolderPath?.Trim();
             if (string.IsNullOrEmpty(pTempFolderPath))

@@ -9,7 +9,7 @@ namespace MSAddonLib.Domain
 {
     public class DiskEntityAddon : DiskEntityBase, IDiskEntity
     {
-        public DiskEntityAddon(string pEntityPath, IReportWriter pReportWriter) : base(pEntityPath, pReportWriter)
+        public DiskEntityAddon(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
         {
         }
 
@@ -93,7 +93,7 @@ namespace MSAddonLib.Domain
             string tempPath = Utils.GetTempDirectory();
 
             
-            AddonPackage package = new AddonPackage(pProcessingFlags, archiver, tempPath);
+            AddonPackage package = new AddonPackage(archiver, pProcessingFlags, tempPath);
 
             pReport = package?.ToString();
 

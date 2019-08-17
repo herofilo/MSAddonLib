@@ -19,12 +19,14 @@ namespace MSAddonLib.Domain
 
         public string Name { get; protected set; }
 
+        public bool InsideArchive { get; protected set; }
+
         protected IReportWriter ReportWriter = null;
 
 
         // -----------------------------------------------------------------------------------------
 
-        public DiskEntityBase(string pEntityPath, IReportWriter pReportWriter)
+        public DiskEntityBase(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter)
         {
             string absolutePath, name;
             DiskEntityType = GetEntityType(pEntityPath, out absolutePath, out name);
@@ -35,6 +37,7 @@ namespace MSAddonLib.Domain
                 Name = name;
             }
 
+            InsideArchive = pInsideArchive;
             ReportWriter = pReportWriter ?? new NullReportWriter();
         }
 
