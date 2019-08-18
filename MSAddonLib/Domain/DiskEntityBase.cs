@@ -108,8 +108,8 @@ namespace MSAddonLib.Domain
         public static bool IsAddonFolder(string pEntityPath)
         {
             return File.Exists(Path.Combine(pEntityPath, AddonPackage.SignatureFilename)) &&
-                   File.Exists(Path.Combine(pEntityPath, AddonPackage.AssetDataFilename)) &&
-                   Directory.Exists(Path.Combine(pEntityPath, "Data"));
+                   File.Exists(Path.Combine(pEntityPath, AddonPackage.AssetDataFilename));
+            // && Directory.Exists(Path.Combine(pEntityPath, "Data"));
         }
 
     }

@@ -150,7 +150,7 @@ namespace MSAddonLib.Domain
 
             pHasMeshes = fileNames.Contains("meshdata.data") && fileNames.Contains("meshdata.index");
 
-            bool formatOk = fileNames.Contains(".addon") && fileNames.Contains("assetdata.jar") && pHasData;
+            bool formatOk = fileNames.Contains(".addon") && fileNames.Contains("assetdata.jar");
 
             byte[] addonContent = pArchiver.ExtractArchivedFileToByte(".addon");
             if (addonContent != null)

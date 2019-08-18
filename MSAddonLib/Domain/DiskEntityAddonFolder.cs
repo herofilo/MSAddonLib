@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Net.NetworkInformation;
 using MSAddonLib.Domain.Addon;
 using MSAddonLib.Persistence;
 using MSAddonLib.Util;
@@ -43,8 +45,13 @@ namespace MSAddonLib.Domain
         {
             pReport = null;
 
-            string tempPath = Utils.GetTempDirectory();
+            if (!pProcessingFlags.HasFlag(ProcessingFlags.ShowAddonContents))
+            {
+                pReport = BriefReport();
+                return true;
+            }
 
+            string tempPath = Utils.GetTempDirectory();
 
             AddonPackage package = new AddonPackage(AbsolutePath, pProcessingFlags, tempPath);
 
@@ -54,6 +61,41 @@ namespace MSAddonLib.Domain
         }
 
 
+        private string BriefReport()
+        {
+            string report;
+            bool hasDemoMovies, hasStockAssets;
+            bool hasMeshes;
+            AddonSignatureFile addonSignature; 
+            CheckContents(out hasMeshes, out hasDemoMovies, out hasStockAssets, out addonSignature);
 
+            report = (hasMeshes ? "OK" : "OK, no meshes");
+            if (hasDemoMovies)
+                report += " (incl. Movies)";
+            if (hasStockAssets)
+                report += " (incl. Stock assets)";
+            string freeText = addonSignature.Free ? "" : "  NOT FREE!";
+            report += $"   [{addonSignature.Publisher}{freeText}]";
+
+            return report;
+        }
+
+
+
+        private void CheckContents(out bool pHasMeshes, out bool pHasDemoMovies, out bool pHasStockAssets, out AddonSignatureFile pAddonSignature)
+        {
+            pAddonSignature = null;
+            byte[] addonContent = File.ReadAllBytes(Path.Combine(AbsolutePath, ".addon"));
+            if (addonContent != null)
+            {
+                pAddonSignature = AddonSignatureFile.Load(addonContent);
+            }
+
+            pHasMeshes = File.Exists(Path.Combine(AbsolutePath, "meshdata.data")) &&
+                         File.Exists(Path.Combine(AbsolutePath, "meshdata.index"));
+
+            pHasDemoMovies = Directory.Exists(Path.Combine(AbsolutePath, "movies"));
+            pHasStockAssets = Directory.Exists(Path.Combine(AbsolutePath, "stock"));
+        }
     }
 }

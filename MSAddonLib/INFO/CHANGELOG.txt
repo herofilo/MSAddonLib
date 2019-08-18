@@ -2,6 +2,11 @@
 MSAddonLib - Version History
 --------------------------------
 
+* v1.1.0.1 (20190818):
+	- Having a Data folder has been dropped for identifying a folder as a valid addon:
+		DiskEntityBase
+		DiskEntityAddon
+
 * v1.1.0 (20190818):
 	- Domain\Asset* classes renamed to DiskEntity*
 	- IReportWriter new property Text
