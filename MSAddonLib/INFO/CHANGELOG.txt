@@ -2,7 +2,7 @@
 MSAddonLib - Version History
 --------------------------------
 
-* v1.1.0 (20190817):
+* v1.1.0 (20190818):
 	- Domain\Asset* classes renamed to DiskEntity*
 	- IReportWriter new property Text
 	- New IReportWriter class: StringReportWriter
@@ -15,13 +15,15 @@ MSAddonLib - Version History
 	- New classes:
 		AddonPackageSource
 		AddonPackageSourceType (enum)
-		PersistenceUtils
+		AddonPersistenceUtils
+		MoviestormPaths: Moviestorm main directories
 	- New processing flags:
 		ListCompactDupVerbsByName
 		CorrectDisguisedFiles
 		CorrectDisguisedFilesDeleteSource
-	- Restoration of addons disguised as archives
+	- Correction of addons disguised as archives
 	- Checked a condition in which a StateMachine file exists but no animation files are found
+
 
 * v1.0.8.6 (20190815):
 	- Weird gestures and gaits labelled as !?

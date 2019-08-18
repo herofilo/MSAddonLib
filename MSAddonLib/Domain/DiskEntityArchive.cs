@@ -118,7 +118,7 @@ namespace MSAddonLib.Domain
                                 IsValidAddon(pArchiveEntryList, false, out rootFolder))
                             {
                                 string errorText;
-                                string newAddonFile = PersistenceUtils.RestoreAddonFile(pArchiver, pProcessingFlags.HasFlag(ProcessingFlags.CorrectDisguisedFilesDeleteSource), null, out errorText);
+                                string newAddonFile = AddonPersistenceUtils.CorrectAddonFile(pArchiver, pProcessingFlags.HasFlag(ProcessingFlags.CorrectDisguisedFilesDeleteSource), null, out errorText);
                                 if (newAddonFile == null)
                                 {
                                     pReport = $"   {ErrorTokenString} Possibly an Addon file disguised as an archive. Failed to restore: {errorText}";
@@ -140,7 +140,7 @@ namespace MSAddonLib.Domain
                                 IsValidAddon(pArchiveEntryList, true, out rootFolder))
                             {
                                 string errorText;
-                                string newAddonFile = PersistenceUtils.RestoreAddonFile(pArchiver, pProcessingFlags.HasFlag(ProcessingFlags.CorrectDisguisedFilesDeleteSource), rootFolder, out errorText);
+                                string newAddonFile = AddonPersistenceUtils.CorrectAddonFile(pArchiver, pProcessingFlags.HasFlag(ProcessingFlags.CorrectDisguisedFilesDeleteSource), rootFolder, out errorText);
                                 if (newAddonFile == null)
                                 {
                                     pReport = $"   {ErrorTokenString} Possibly an Addon file disguised as an archive. Failed to restore: {errorText}";

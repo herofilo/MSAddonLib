@@ -7,6 +7,7 @@ using MSAddonLib.Domain;
 using MSAddonLib.Domain.Addon;
 using MSAddonLib.Persistence;
 using MSAddonLib.Util;
+using MSAddonLib.Util.Persistence;
 
 namespace TestRun
 {
@@ -18,10 +19,16 @@ namespace TestRun
 
         private static string _diskEntity = null;
 
+        private static MoviestormPaths _moviestormPaths = null;
+
         static void Main(string[] args)
         {
-            if (!InitializationChores(args))
+            string errorText;
+            if (!InitializationChores(args, out errorText))
+            {
+                Console.WriteLine($"ERROR: {errorText}");
                 return;
+            }
 
             Console.WriteLine($"Temp path: {_tempPath}");
             Console.WriteLine($"Entity Path: {_diskEntity}");
@@ -40,8 +47,9 @@ namespace TestRun
             Console.ReadKey();
         }
 
-        private static bool InitializationChores(string[] pArgs)
+        private static bool InitializationChores(string[] pArgs, out string pErrorText)
         {
+            pErrorText = null;
             if (!CheckArguments(pArgs))
                 return false;
 
@@ -49,6 +57,13 @@ namespace TestRun
 
             string errorText;
             Utils.ResetTempFolder(out errorText);
+
+            _moviestormPaths = AddonPersistenceUtils.GetMoviestormPaths(out errorText);
+            if (_moviestormPaths == null)
+            {
+                pErrorText = errorText;
+                return false;
+            }
 
             return true;
         }
