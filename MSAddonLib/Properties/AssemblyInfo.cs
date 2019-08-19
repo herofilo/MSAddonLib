@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("MSAddonLib")]
-[assembly: AssemblyCopyright("Copyright ©  2019 JAMM")]
+[assembly: AssemblyCopyright("Copyright ©  2019 Exception Raised Software")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
