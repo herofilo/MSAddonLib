@@ -3,7 +3,7 @@ using System.Xml.Serialization;
 
 namespace MSAddonLib.Domain.Addon
 {
-    public class BodyPart
+    public sealed class BodyPart
     {
         [XmlElement("partsCovered")]
         public string PartsCovered { get; set; }

@@ -152,10 +152,50 @@ namespace MSAddonLib.Domain.AssetFiles
             set { this.bindingsField = value; }
         }
 
+
+        /// <summary>
+        /// Creates a BodyPartMorph instance from an existent description file
+        /// </summary>
+        /// <param name="pFilename">Path to the bodypart description file</param>
+        /// <param name="pErrorText">Text of error, if any</param>
+        /// <returns>BodyPartMorph instance, or null if error</returns>
+        public static BodyPartMorph Load(string pFilename, out string pErrorText)
+        {
+            pErrorText = null;
+            if (!File.Exists(pFilename))
+            {
+                pErrorText = "BodyPartMorph.Load(): File not found";
+                return null;
+            }
+
+            BodyPartMorph bodyPart = new BodyPartMorph();
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(bodyPart.GetType());
+                using (StreamReader reader = new StreamReader(pFilename))
+                {
+                    bodyPart = (BodyPartMorph)serializer.Deserialize(reader);
+                    reader.Close();
+                }
+            }
+            catch (Exception exception)
+            {
+                pErrorText = $"EXCEPTION while deserializing BodyPartMorph: {exception.Message} - {exception.InnerException?.Message}";
+                bodyPart = null;
+            }
+
+            return bodyPart;
+        }
+
+
+
+
         /// <summary>
         /// Creates a BodyPartMorph instance from a XML string
         /// </summary>
         /// <param name="pText">XML string</param>
+        /// <param name="pErrorText">Text of error, if any</param>
         /// <returns>BodyPartMorph instance, or null if error</returns>
         public static BodyPartMorph LoadFromString(string pText, out string pErrorText)
         {

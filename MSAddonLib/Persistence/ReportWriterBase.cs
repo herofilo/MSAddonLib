@@ -6,6 +6,7 @@ namespace MSAddonLib.Persistence
     {
         public int ReportLevel { get; protected set; } = 0;
 
+        public string Text { get; }
 
         // ------------------------------------------------------------------------------------------------------
 

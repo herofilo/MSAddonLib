@@ -3,14 +3,19 @@ using System.IO;
 
 namespace MSAddonLib.Domain.Addon
 {
-    public class AddonPropertiesInfo
+    public sealed class AddonPropertiesInfo
     {
         public string Name { get; set; }
         public string Blurb { get; set; }
         public string Url { get; set; }
 
 
-
+        /// <summary>
+        /// Creates a AddonPropertiesInfo instance from an existent description file
+        /// </summary>
+        /// <param name="pFilename">Path to the addon properties file</param>
+        /// <param name="pErrorText">Text of error, if any</param>
+        /// <returns>AddonPropertiesInfo instance, or null if error</returns>
         public static AddonPropertiesInfo Load(string pFilename, out string pErrorText)
         {
             pErrorText = null;
@@ -54,6 +59,12 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
+        /// <summary>
+        /// Creates a AddonPropertiesInfo instance from a XML string
+        /// </summary>
+        /// <param name="pText">XML string</param>
+        /// <param name="pErrorText">Text of error, if any</param>
+        /// <returns>AddonPropertiesInfo instance, or null if error</returns>
         public static AddonPropertiesInfo LoadFromString(string pText, out string pErrorText)
         {
             pErrorText = null;

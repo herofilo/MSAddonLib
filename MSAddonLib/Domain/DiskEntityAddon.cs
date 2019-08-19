@@ -7,9 +7,9 @@ using SevenZip;
 
 namespace MSAddonLib.Domain
 {
-    public class AssetAddon : AssetBase, IAsset
+    public class DiskEntityAddon : DiskEntityBase, IDiskEntity
     {
-        public AssetAddon(string pAssetPath, IReportWriter pReportWriter) : base(pAssetPath, pReportWriter)
+        public DiskEntityAddon(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
         {
         }
 
@@ -17,10 +17,10 @@ namespace MSAddonLib.Domain
         // ---------------------------------------------------------------------------
 
         // TODO - Print report
-        public bool CheckAsset(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
+        public bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
         {
             string report;
-            bool checkOk = CheckAsset(pProcessingFlags, out report);
+            bool checkOk = CheckEntity(pProcessingFlags, out report);
             
             pNamePrinted = string.IsNullOrEmpty(pNamePrinted) ? Name : Name + pNamePrinted;
 
@@ -43,7 +43,7 @@ namespace MSAddonLib.Domain
 
 
 
-        private bool CheckAsset(ProcessingFlags pProcessingFlags, out string pReport)
+        private bool CheckEntity(ProcessingFlags pProcessingFlags, out string pReport)
         {
             bool reportOnlyIssues = pProcessingFlags.HasFlag(ProcessingFlags.JustReportIssues);
             bool showAddonContents = pProcessingFlags.HasFlag(ProcessingFlags.ShowAddonContents);
@@ -93,7 +93,7 @@ namespace MSAddonLib.Domain
             string tempPath = Utils.GetTempDirectory();
 
             
-            AddonPackage package = new AddonPackage(pProcessingFlags, archiver, tempPath);
+            AddonPackage package = new AddonPackage(archiver, pProcessingFlags, tempPath);
 
             pReport = package?.ToString();
 
@@ -150,7 +150,7 @@ namespace MSAddonLib.Domain
 
             pHasMeshes = fileNames.Contains("meshdata.data") && fileNames.Contains("meshdata.index");
 
-            bool formatOk = fileNames.Contains(".addon") && fileNames.Contains("assetdata.jar") && pHasData;
+            bool formatOk = fileNames.Contains(".addon") && fileNames.Contains("assetdata.jar");
 
             byte[] addonContent = pArchiver.ExtractArchivedFileToByte(".addon");
             if (addonContent != null)

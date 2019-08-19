@@ -41,9 +41,48 @@ namespace MSAddonLib.Domain.AssetFiles
 
 
         /// <summary>
+        /// Creates a StateMachine instance from an existent StateMachine file
+        /// </summary>
+        /// <param name="pFilename">Path to the StateMachine description file</param>
+        /// <param name="pErrorText">Text of error, if any</param>
+        /// <returns>StateMachine instance, or null if error</returns>
+        public static StateMachine Load(string pFilename, out string pErrorText)
+        {
+            pErrorText = null;
+            if (!File.Exists(pFilename))
+            {
+                pErrorText = "StateMachine.Load(): File not found";
+                return null;
+            }
+
+            StateMachine stateMachine = new StateMachine();
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(stateMachine.GetType());
+                using (StreamReader reader = new StreamReader(pFilename))
+                {
+                    stateMachine = (StateMachine)serializer.Deserialize(reader);
+                    reader.Close();
+                }
+            }
+            catch (Exception exception)
+            {
+                pErrorText = $"EXCEPTION while deserializing StateMachine: {exception.Message} - {exception.InnerException?.Message}";
+                stateMachine = null;
+            }
+
+            return stateMachine;
+        }
+
+
+
+
+        /// <summary>
         /// Creates a StateMachine instance from a XML string
         /// </summary>
         /// <param name="pText">XML string</param>
+        /// <param name="pErrorText">Text of error, if any</param>
         /// <returns>StateMachine instance, or null if error</returns>
         public static StateMachine LoadFromString(string pText, out string pErrorText)
         {

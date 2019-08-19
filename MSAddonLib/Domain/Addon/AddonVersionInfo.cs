@@ -9,7 +9,7 @@ namespace MSAddonLib.Domain.Addon
     /// Version information (in the addon version file)
     /// </summary>
     [XmlRoot("patch")]
-    public class AddonVersionInfo
+    public sealed class AddonVersionInfo
     {
         [XmlElement("component")]
         public string Component { get; set; }

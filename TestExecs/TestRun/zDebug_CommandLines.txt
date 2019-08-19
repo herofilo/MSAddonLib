@@ -1,0 +1,9 @@
+
+
+-c "C:\Users\Jesus\Moviestorm\!Modelling\! Devel\MSAddonChecker\TestData\v2Test\Props\Kkffoo_1930s.addon"
+
+-c C:\Users\Jesus\Moviestorm\AddOn\kkffo_1930s_Decor01
+
+-c -cdf "C:\Users\Jesus\Moviestorm\!Modelling\! Devel\MSAddonChecker\TestData\v2Test\Zips\jm_CuckooClock.zip"
+
+-c -cdf "C:\Users\Jesus\Moviestorm\!Modelling\! Devel\MSAddonChecker\TestData\v2Test\Zips\jm_CuckooClockRooted.rar"

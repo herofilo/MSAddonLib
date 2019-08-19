@@ -3,7 +3,7 @@ using System.Xml.Serialization;
 
 namespace MSAddonLib.Domain.Addon
 {
-    public class BodyModelItem
+    public sealed class BodyModelItem
     {
         //   <templates/>
 

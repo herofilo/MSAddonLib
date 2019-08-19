@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,7 +17,10 @@ namespace MSAddonLib.Domain.Addon
     {
         public BodyModelSumPuppets Puppets { get; private set; }
 
-        private SevenZipArchiver Archiver { get; set; }
+
+        public AddonPackageSource AddonSource { get; private set; }
+
+        // private SevenZipArchiver Archiver { get; set; }
 
         private string TempFolderPath { get; set; }
 
@@ -43,9 +47,9 @@ namespace MSAddonLib.Domain.Addon
 
         }
 
-        public BodyModelsSummary(SevenZipArchiver pArchiver, string pTempFolderPath, List<BodyModelItem> pBodyModels, bool pLoadAnimations = true, bool pListGestureGaitsAnimations = true)
+        public BodyModelsSummary(AddonPackageSource pSource, string pTempFolderPath, List<BodyModelItem> pBodyModels, bool pLoadAnimations = true, bool pListGestureGaitsAnimations = true)
         {
-            Archiver = pArchiver;
+            AddonSource = pSource;
             TempFolderPath = pTempFolderPath?.Trim();
             BodyModels = pBodyModels;
             LoadAnimations = pLoadAnimations;
@@ -56,24 +60,32 @@ namespace MSAddonLib.Domain.Addon
         // ---------------------------------------------------------------------------------------------------------
 
 
-        public bool PopulateSummary(out string pErrorText, SevenZipArchiver pArchiver = null, string pTempFolderPath = null, List<BodyModelItem> pBodyModels = null)
+        public bool PopulateSummary(out string pErrorText, AddonPackageSource pSource = null, string pTempFolderPath = null, List<BodyModelItem> pBodyModels = null)
         {
             pErrorText = null;
             if (_initialized)
                 return true;
 
-            if (!PopulateSummaryPreChecks(ref pArchiver, ref pTempFolderPath, ref pBodyModels, out pErrorText))
+            if (!PopulateSummaryPreChecks(ref pSource, ref pTempFolderPath, ref pBodyModels, out pErrorText))
                 return false;
 
             bool isOk = true;
-            string mftFile = Path.Combine(pTempFolderPath, AddonPackage.AssetDataFilename);
+            string assetDataFile = null;
+            bool deleteTempAssetDataFile = false;
             try
             {
-                pArchiver.ArchivedFilesExtract(pTempFolderPath, new List<string>() { AddonPackage.AssetDataFilename });
+                if (pSource.SourceType == AddonPackageSourceType.Folder)
+                    assetDataFile = Path.Combine(pSource.SourcePath, AddonPackage.AssetDataFilename);
+                else
+                {
+                    assetDataFile = Path.Combine(pTempFolderPath, AddonPackage.AssetDataFilename);
+                    pSource.Archiver.ArchivedFilesExtract(pTempFolderPath, new List<string>() { AddonPackage.AssetDataFilename });
+                    deleteTempAssetDataFile = true;
+                }
 
-                List<string> puppetTextureList = GetPuppetTextures(pArchiver);
+                List<string> puppetTextureList = GetPuppetTextures(pSource);
 
-                SevenZipArchiver mftArchiver = new SevenZipArchiver(mftFile);
+                SevenZipArchiver mftArchiver = new SevenZipArchiver(assetDataFile);
 
                 foreach (BodyModelItem item in pBodyModels)
                 {
@@ -93,7 +105,8 @@ namespace MSAddonLib.Domain.Addon
             }
             finally
             {
-                File.Delete(mftFile);
+                if(deleteTempAssetDataFile)
+                    File.Delete(assetDataFile);
             }
 
             _initialized = isOk;
@@ -104,21 +117,28 @@ namespace MSAddonLib.Domain.Addon
 
 
 
-        private bool PopulateSummaryPreChecks(ref SevenZipArchiver pArchiver, ref string pTempFolderPath, ref List<BodyModelItem> pBodyModels, out string pErrorText)
+        private bool PopulateSummaryPreChecks(ref AddonPackageSource pSource, ref string pTempFolderPath, ref List<BodyModelItem> pBodyModels, out string pErrorText)
         {
             pErrorText = null;
-            if (pArchiver == null)
+            if (pSource == null)
             {
-                if (Archiver == null)
+                if (AddonSource == null)
                 {
-                    pErrorText = "No archiver specification";
+                    pErrorText = "No addon source specification";
                     return false;
                 }
 
-                pArchiver = Archiver;
+                pSource = AddonSource;
             }
             else
-                Archiver = pArchiver;
+                AddonSource = pSource;
+
+            if (AddonSource.SourceType == AddonPackageSourceType.Invalid)
+            {
+                pErrorText = "Invalid addon source";
+                return false;
+            }
+
 
             pTempFolderPath = pTempFolderPath?.Trim();
             if (string.IsNullOrEmpty(pTempFolderPath))
@@ -158,15 +178,39 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
-        private List<string> GetPuppetTextures(SevenZipArchiver pArchiver)
+        private List<string> GetPuppetTextures(AddonPackageSource pSource)
         {
-            List<ArchiveFileInfo> filesInfo;
-            pArchiver.ArchivedFileList(out filesInfo);
+
+            List<string> candidateFiles = new List<string>();
+
+            switch (pSource.SourceType)
+            {
+                case AddonPackageSourceType.Archiver:
+                    List<ArchiveFileInfo> filesInfo;
+                    pSource.Archiver.ArchivedFileList(out filesInfo);
+                    foreach (ArchiveFileInfo fileInfo in filesInfo)
+                    {
+                        candidateFiles.Add(fileInfo.FileName?.Trim().ToLower());
+                    }
+                    break;
+                case AddonPackageSourceType.Folder:
+                    string rootFolder = pSource.SourcePath.ToLower();
+                    if (!rootFolder.EndsWith("\\"))
+                        rootFolder += "\\";
+                    // int rootFolderLength = rootFolder.Length + (rootFolder.EndsWith("\\") ? 0 : 1);
+                    foreach (string fileName in Directory.EnumerateFiles(pSource.SourcePath, "*",
+                        SearchOption.AllDirectories))
+                    {
+                        string file = fileName.ToLower().Replace(rootFolder, "");
+                        candidateFiles.Add(file);
+                    }
+
+                    break;
+            }
 
             List<string> puppetTextures = new List<string>();
-            foreach (ArchiveFileInfo fileInfo in filesInfo)
+            foreach (string filePath in candidateFiles)
             {
-                string filePath = fileInfo.FileName?.Trim().ToLower();
                 if(filePath.StartsWith("data\\puppets\\") && !filePath.Contains("\\thumbs\\") && !filePath.Contains("\\collections\\"))
                 {
                     string extension = Path.GetExtension(filePath);
@@ -175,7 +219,6 @@ namespace MSAddonLib.Domain.Addon
                         puppetTextures.Add(filePath.Replace("\\", "/"));
                     }
                 }
-
             }
 
             puppetTextures.Sort();
@@ -214,6 +257,9 @@ namespace MSAddonLib.Domain.Addon
                     }
                 }
 
+
+                if ((puppet.Animations == null) && ((puppet.GestureAndGaitsAnimations + puppet.OtherAnimations) <= 0))
+                    continue;
                 if (LoadAnimations)
                 {
                     if (puppet.Animations != null)
@@ -230,7 +276,8 @@ namespace MSAddonLib.Domain.Addon
                     if (!ListGestureGaitsAnimations)
                     {
                         int gestureAnimations = puppet.Animations?.Count ?? 0;
-                        textBuilder.AppendLine($"    Animations: Gesture/Gaits: {gestureAnimations}   Other: {puppet.OtherAnimations} - See Verbs");
+                        textBuilder.AppendLine(
+                            $"    Animations: Gesture/Gaits: {gestureAnimations}   Other: {puppet.OtherAnimations} - See Verbs");
                         continue;
                     }
 
@@ -244,17 +291,18 @@ namespace MSAddonLib.Domain.Addon
 
                         if (puppet.OtherAnimations > 0)
                         {
-                            textBuilder.AppendLine($"       Non-gesture/gaits animations: {puppet.OtherAnimations} - See Verbs");
+                            textBuilder.AppendLine(
+                                $"       Non-gesture/gaits animations: {puppet.OtherAnimations} - See Verbs");
                         }
                     }
                     else
                     {
                         if (puppet.OtherAnimations > 0)
                         {
-                            textBuilder.AppendLine($"    Animations (non-gesture/gaits): {puppet.OtherAnimations} - See Verbs");
+                            textBuilder.AppendLine(
+                                $"    Animations (non-gesture/gaits): {puppet.OtherAnimations} - See Verbs");
                         }
                     }
-
                 }
             }
             return textBuilder.ToString();
@@ -328,7 +376,7 @@ namespace MSAddonLib.Domain.Addon
 
         public List<string> Animations { get; set; }
 
-        public List<string> GestureAndGaitsVerbs { get; set; }
+        // public List<string> GestureAndGaitsVerbs { get; set; }
 
         public int GestureAndGaitsAnimations { get; set; } = 0;
 

@@ -5,18 +5,18 @@ using MSAddonLib.Persistence;
 
 namespace MSAddonLib.Domain
 {
-    public class AssetSketchup : AssetBase, IAsset
+    public class DiskEntitySketchup : DiskEntityBase, IDiskEntity
     {
-        public AssetSketchup(string pAssetPath, IReportWriter pReportWriter) : base(pAssetPath, pReportWriter)
+        public DiskEntitySketchup(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
         {
         }
 
         // ---------------------------------------------------------------------------------------------------------------
 
-        public bool CheckAsset(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
+        public bool CheckEntity(ProcessingFlags pProcessingFlags, string pNamePrinted = null)
         {
             string report;
-            bool checkOk = CheckAsset(pProcessingFlags, out report);
+            bool checkOk = CheckEntity(pProcessingFlags, out report);
 
             if (checkOk && pProcessingFlags.HasFlag(ProcessingFlags.JustReportIssues))
                 return false;
@@ -26,7 +26,7 @@ namespace MSAddonLib.Domain
         }
 
 
-        private bool CheckAsset(ProcessingFlags pProcessingFlags, out string pReport)
+        private bool CheckEntity(ProcessingFlags pProcessingFlags, out string pReport)
         {
             bool reportOnlyIssues = pProcessingFlags.HasFlag(ProcessingFlags.JustReportIssues);
             // bool showAddonContents = pProcessingFlags.HasFlag(ProcessingFlags.ShowAddonContents);
