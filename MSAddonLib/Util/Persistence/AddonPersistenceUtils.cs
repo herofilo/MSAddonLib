@@ -189,6 +189,8 @@ namespace MSAddonLib.Util.Persistence
 
         public string ContentPacksPath { get; private set; }
 
+        public string PreviewsPath { get; private set; }
+
         public string UserDataPath { get; private set; }
 
         public string AddonsPath { get; private set; }
@@ -200,6 +202,7 @@ namespace MSAddonLib.Util.Persistence
         {
             InstallationPath = pInstallationPath;
             ContentPacksPath = Path.Combine(InstallationPath, "AddOn");
+            PreviewsPath = Path.Combine(InstallationPath, "Previews");
             UserDataPath = pUserDataPath;
             AddonsPath = Path.Combine(UserDataPath, "AddOn");
             MoviesPath = Path.Combine(UserDataPath, "Movies");

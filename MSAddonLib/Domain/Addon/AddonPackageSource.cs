@@ -3,20 +3,29 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 using MSAddonLib.Util.Persistence;
 using SevenZip;
 
 namespace MSAddonLib.Domain.Addon
 {
+    [Serializable]
     public sealed class AddonPackageSource
     {
         public AddonPackageSourceType SourceType { get; private set; } = AddonPackageSourceType.Invalid;
 
+        [XmlIgnore]
         public SevenZipArchiver Archiver { get; private set; }
 
         public string SourcePath { get; private set; }
 
         // -----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+        public AddonPackageSource()
+        {
+
+        }
 
 
         public AddonPackageSource(string pSourcePath)

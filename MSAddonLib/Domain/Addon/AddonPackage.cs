@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Xml.Serialization;
 using MSAddonLib.Domain.AssetFiles;
+using MSAddonLib.Util;
 using MSAddonLib.Util.Persistence;
 using SevenZip;
 
@@ -12,6 +14,7 @@ namespace MSAddonLib.Domain.Addon
     /// <summary>
     /// Detailed information about a addon package
     /// </summary>
+    [Serializable]
     public sealed class AddonPackage
     {
         /// <summary>
@@ -67,37 +70,35 @@ namespace MSAddonLib.Domain.Addon
         /// <summary>
         /// Name of the addon
         /// </summary>
-        public string Name { get { return AddonSignature.Name; } }
+        public string Name => AddonSignature.Name;
 
         /// <summary>
         /// Friendly name of the addon
         /// </summary>
-        public string FriendlyName { get { return string.IsNullOrEmpty(_friendlyName) ? AddonSignature.Name : _friendlyName; } }
+        public string FriendlyName => string.IsNullOrEmpty(_friendlyName) ? AddonSignature.Name : _friendlyName;
+
         private string _friendlyName = "";
 
         /// <summary>
         /// Name of the account of the published
         /// </summary>
-        public string Publisher { get { return AddonSignature.Publisher; } }
+        public string Publisher => AddonSignature.Publisher;
 
         /// <summary>
         /// Qualified name of the addon
         /// </summary>
-        public string QualifiedName
-        {
-            get { return Publisher + "." + Name; }
-        }
+        public string QualifiedName => $"{Publisher}.{Name}";
 
 
         /// <summary>
         /// The addon is free, not requiring a license for its use in Moviestorm
         /// </summary>
-        public bool Free { get { return AddonSignature.Free; } }
+        public bool Free => AddonSignature.Free;
 
         /// <summary>
         /// Description of the addon
         /// </summary>
-        public string Description { get { return AddonSignature.Description; } }
+        public string Description => AddonSignature.Description;
 
         /// <summary>
         /// Descriptive blurb for the addon
@@ -108,6 +109,16 @@ namespace MSAddonLib.Domain.Addon
         /// Revision number of the addon
         /// </summary>
         public string Revision { get; private set; } = "";
+
+        /// <summary>
+        /// Path to the source file/folder
+        /// </summary>
+        public string Location { get; private set; }
+
+        /// <summary>
+        /// Datetime of last modification of signations file
+        /// </summary>
+        public DateTime? LastCompiled { get; private set; } = null;
 
         /// <summary>
         /// Addon signature file of the addon
@@ -147,11 +158,13 @@ namespace MSAddonLib.Domain.Addon
         /// <summary>
         /// List of demo (starter) movies included
         /// </summary>
+        [XmlArrayItem("Movie")]
         public List<string> DemoMovies { get; private set; }
 
         /// <summary>
         /// List of stock assets
         /// </summary>
+        [XmlArrayItem("Stock")]
         public List<string> StockAssets { get; private set; }
 
         /// <summary>
@@ -188,26 +201,31 @@ namespace MSAddonLib.Domain.Addon
         /// <summary>
         /// Sound files in the addon
         /// </summary>
+        [XmlArrayItem("SoundFile")]
         public List<string> Sounds { get; private set; }
 
         /// <summary>
         /// Filters in the addon
         /// </summary>
+        [XmlArrayItem("Filter")]
         public List<string> Filters { get; private set; }
 
         /// <summary>
         /// Special effects in the addon
         /// </summary>
+        [XmlArrayItem("SpecialEffect")]
         public List<string> SpecialEffects { get; private set; }
 
         /// <summary>
         /// Materials in the addon
         /// </summary>
+        [XmlArrayItem("Material")]
         public List<string> Materials { get; private set; }
 
         /// <summary>
         /// Sky textures in the addon
         /// </summary>
+        [XmlArrayItem("Sky")]
         public List<string> SkyTextures { get; private set; }
 
         // --------------------------
@@ -248,6 +266,16 @@ namespace MSAddonLib.Domain.Addon
 
 
         // -----------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Constructor required for serialization
+        /// </summary>
+        public AddonPackage()
+        {
+
+        }
+
+
         /// <summary>
         /// Full information about the addon
         /// </summary>
@@ -269,8 +297,35 @@ namespace MSAddonLib.Domain.Addon
                 throw new Exception($"Error extracting the list of archived files: {pArchiver.LastErrorText}");
             }
 
+            
+
             LoadAddonPackage(pProcessingFlags, pTemporaryFolder);
         }
+
+
+        /// <summary>
+        /// Full information about the addon
+        /// </summary>
+        /// <param name="pFolderPath">Path of the folder containing the addon</param>
+        /// <param name="pProcessingFlags">Processing flags</param>
+        /// <param name="pTemporaryFolder">Path to the root temporary folder</param>
+        public AddonPackage(string pFolderPath, ProcessingFlags pProcessingFlags)
+        {
+            if (string.IsNullOrEmpty(pFolderPath = pFolderPath.Trim()))
+            {
+                throw new Exception("Not a valid folder specification");
+            }
+
+            string folderPath = (Path.IsPathRooted(pFolderPath)) ? pFolderPath : Path.GetFullPath(pFolderPath);
+            if (!Directory.Exists(folderPath))
+            {
+                throw new Exception("Folder not found");
+            }
+            Source = new AddonPackageSource(folderPath);
+
+            LoadAddonPackage(pProcessingFlags, Utils.GetTempDirectory());
+        }
+
 
 
         /// <summary>
@@ -302,6 +357,9 @@ namespace MSAddonLib.Domain.Addon
             if (Source.SourceType == AddonPackageSourceType.Invalid)
                 throw new Exception("Invalid source type for the addon");
 
+
+            Location = Source.SourcePath;
+
             // bool isFolderAddon = Source.SourceType == AddonPackageSourceType.Folder;
 
             ListAllAnimationFiles = pProcessingFlags.HasFlag(ProcessingFlags.ListAllAnimationFiles);
@@ -321,6 +379,9 @@ namespace MSAddonLib.Domain.Addon
             {
                 throw new Exception("No Addon AssetData file (assetData.jar)");
             }
+
+            LastCompiled = GetLastCompiled();
+
 
             HasVerbs = contentsSummary.HasVerbs;
 
@@ -374,6 +435,29 @@ namespace MSAddonLib.Domain.Addon
 
             return true;
         }
+
+        private DateTime? GetLastCompiled()
+        {
+            DateTime? lastModified = null;
+            if (Source.SourceType == AddonPackageSourceType.Archiver)
+            {
+                ArchiveFileInfo? archivedFileInfo = Source.Archiver.GetFileInfo(SignatureFilename);
+                return archivedFileInfo?.LastWriteTime;
+            }
+
+            try
+            {
+                FileInfo fileInfo = new FileInfo(Path.Combine(Source.SourcePath, SignatureFilename));
+                return fileInfo?.LastWriteTime;
+            }
+            catch
+            {
+
+            }
+
+            return null;
+        }
+
 
 
         private CheckContentsInFileResult CheckContentsInFileList(List<ArchiveFileInfo> pFileList)

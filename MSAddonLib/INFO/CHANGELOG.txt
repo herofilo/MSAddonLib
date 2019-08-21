@@ -2,6 +2,14 @@
 MSAddonLib - Version History
 --------------------------------
 
+* v1.2.0 (20190821):
+	- SevenZipArchiver: new method GetFileInfo()
+	- AddonPackage:
+		New constructor: 
+		New properties: Location  LastCompiled
+	- MoviestormPaths: new property: PreviewsPath
+	- Multiple changes to AddonPackage and related classes for making them serializable
+
 * v1.1.0.1 (20190818):
 	- Having a Data folder has been dropped for identifying a folder as a valid addon:
 		DiskEntityBase

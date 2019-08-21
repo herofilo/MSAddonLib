@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 using MSAddonLib.Domain.AssetFiles;
 using MSAddonLib.Util.Persistence;
 using SevenZip;
@@ -317,7 +318,16 @@ namespace MSAddonLib.Domain.Addon
     {
         public List<BodyModelSumPuppet> Puppets { get; private set; }
 
+        [XmlIgnore]
         public SevenZipArchiver Archiver { get; private set; }
+
+
+        // ------------------------------------------------------------------------------------
+
+        public BodyModelSumPuppets()
+        {
+
+        }
 
 
         public BodyModelSumPuppets(SevenZipArchiver pArchiver)
@@ -398,6 +408,12 @@ namespace MSAddonLib.Domain.Addon
 
 
         // ---------------------------------------------------------------------------------
+
+        public BodyModelSumPuppet()
+        {
+
+        }
+
 
         public BodyModelSumPuppet(string pName, SevenZipArchiver pArchiver)
         {
@@ -577,6 +593,12 @@ namespace MSAddonLib.Domain.Addon
         public string PuppetName { get; set; }
 
 
+        // ------------------------------------------------------------------------------------------
+
+        public BodyModelSumBodyPart()
+        {
+
+        }
 
 
         public BodyModelSumBodyPart(SevenZipArchiver pArchiver, string pPuppetName)

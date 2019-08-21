@@ -65,6 +65,7 @@ namespace MSAddonLib.Util.Persistence
 
         // ------------------------------------------------------------------------------------------
 
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -224,6 +225,47 @@ namespace MSAddonLib.Util.Persistence
             }
 
             return false;
+        }
+
+
+
+        public ArchiveFileInfo? GetFileInfo(string pFilename)
+        {
+            LastErrorText = null;
+
+            if (string.IsNullOrEmpty(pFilename = pFilename?.Trim().ToLower()))
+            {
+                LastErrorText = "Invalid file name";
+                return null;
+            }
+
+            try
+            {
+                SevenZipExtractor extractor = GetExtractor();
+                if (extractor == null)
+                {
+                    return null;
+                }
+
+                using (extractor)
+                {
+                    foreach (var fileInfo in extractor.ArchiveFileData)
+                    {
+                        string filename = fileInfo.FileName.ToLower();
+                        if (filename == pFilename)
+                        {
+                            return fileInfo;
+                        }
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                LastErrorText = $"EXCEPTION: {exception.Message}";
+                return null;
+            }
+
+            return null;
         }
 
 

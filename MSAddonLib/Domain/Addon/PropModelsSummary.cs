@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Xml.Serialization;
 using MSAddonLib.Domain.AssetFiles;
 using MSAddonLib.Util.Persistence;
 
@@ -216,7 +217,17 @@ namespace MSAddonLib.Domain.Addon
     {
         public List<PropModelSumProp> Props { get; private set; }
 
+        [XmlIgnore]
         public SevenZipArchiver Archiver { get; private set; }
+
+
+        // ------------------------------------------------------------------
+
+
+        public PropModelSumProps()
+        {
+
+        }
 
 
         public PropModelSumProps(SevenZipArchiver pArchiver)
@@ -300,6 +311,13 @@ namespace MSAddonLib.Domain.Addon
 
 
         // ---------------------------------------------------------------------------------
+
+
+        public PropModelSumProp()
+        {
+
+        }
+
 
         public PropModelSumProp(string pName, SevenZipArchiver pArchiver)
         {
