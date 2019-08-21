@@ -301,6 +301,28 @@ namespace MSAddonLib.Util
             return matchResult;
         }
 
+
+        // -------------------------------------------------------------------------------------------------------
+
+        public static string GetExceptionExtendedMessage(Exception pException)
+        {
+            string text = pException.Message;
+
+            string innerExceptionText = null;
+
+            while (pException.InnerException != null)
+            {
+                innerExceptionText = pException.InnerException.Message;
+                pException = pException.InnerException;
+            }
+
+            if (innerExceptionText == null)
+                return text;
+
+            return $"{text} [{innerExceptionText}]";
+        }
+
+
         // -------------------------------------------------------------------------------------------------------
 
         /// <summary>
