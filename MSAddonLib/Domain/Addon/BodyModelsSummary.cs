@@ -400,7 +400,7 @@ namespace MSAddonLib.Domain.Addon
 
         private int _RootPathLength;
 
-        private bool _initialData = false;
+        // private bool _initialData = false;
 
         private SevenZipArchiver _Archiver;
 

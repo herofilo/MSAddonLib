@@ -117,7 +117,7 @@ namespace MSAddonLib.Domain.Addon
                 }
                 addonSignatureFile.Publisher = developer;
             }
-            catch (Exception exception)
+            catch // (Exception exception)
             {
                 addonSignatureFile = null;
             }

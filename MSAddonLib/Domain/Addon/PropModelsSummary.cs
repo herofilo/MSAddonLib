@@ -301,13 +301,13 @@ namespace MSAddonLib.Domain.Addon
         public List<string> Animations { get; set; }
 
 
-        private string _RootPath;
+        private readonly string _rootPath;
 
-        private int _RootPathLength;
+        private readonly int _rootPathLength;
 
-        private bool _initialData = false;
+        // private bool _initialData = false;
 
-        private SevenZipArchiver _Archiver;
+        private readonly SevenZipArchiver _archiver;
 
 
         // ---------------------------------------------------------------------------------
@@ -321,11 +321,11 @@ namespace MSAddonLib.Domain.Addon
 
         public PropModelSumProp(string pName, SevenZipArchiver pArchiver)
         {
-            _Archiver = pArchiver;
+            _archiver = pArchiver;
             PropName = pName?.Trim();
             // ************ CAVEAT ************
-            _RootPath = $"data/props/{PropName.ToLower()}/";
-            _RootPathLength = _RootPath.Length;
+            _rootPath = $"data/props/{PropName.ToLower()}/";
+            _rootPathLength = _rootPath.Length;
         }
 
 
@@ -338,7 +338,7 @@ namespace MSAddonLib.Domain.Addon
                 Variants = new List<string>();
                 foreach (Template item in pPropModelItem.Templates)
                 {
-                    string variantName = item.Name.Remove(0, _RootPathLength);
+                    string variantName = item.Name.Remove(0, _rootPathLength);
                     int dotIndex = variantName.LastIndexOf('.');
                     variantName = variantName.Remove(dotIndex);
                     Variants.Add(variantName);
@@ -392,17 +392,17 @@ namespace MSAddonLib.Domain.Addon
         private bool ReadPropDescription(out string pErrorText)
         {
             pErrorText = null;
-            string descriptorFile = Path.Combine(_RootPath.Replace("/", "\\"), "DESCRIPTOR");
+            string descriptorFile = Path.Combine(_rootPath.Replace("/", "\\"), "DESCRIPTOR");
 
-            string descriptorContents = _Archiver.ExtractArchivedFileToString(descriptorFile);
+            string descriptorContents = _archiver.ExtractArchivedFileToString(descriptorFile);
             if (descriptorContents == null)
             {
-                if (!_Archiver.FileExists(descriptorFile))
+                if (!_archiver.FileExists(descriptorFile))
                 {
                     return true;
                 }
 
-                pErrorText = _Archiver.LastErrorText;
+                pErrorText = _archiver.LastErrorText;
                 return false;
             }
 

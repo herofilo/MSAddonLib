@@ -9,7 +9,7 @@ namespace MSAddonLib.Persistence
     {
 
 
-        public string Text => _stringBuilder.ToString();
+        public new string Text => _stringBuilder.ToString();
 
         private StringBuilder _stringBuilder = new StringBuilder();
 

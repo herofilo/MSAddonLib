@@ -96,7 +96,7 @@ namespace MSAddonLib.Domain
                 pName = Path.GetFileName(pEntityPath);
 
             }
-            catch (Exception exception)
+            catch // (Exception exception)
             {
                 diskEntityType = DiskEntityType.Unknown;
             }

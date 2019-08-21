@@ -438,7 +438,6 @@ namespace MSAddonLib.Domain.Addon
 
         private DateTime? GetLastCompiled()
         {
-            DateTime? lastModified = null;
             if (Source.SourceType == AddonPackageSourceType.Archiver)
             {
                 ArchiveFileInfo? archivedFileInfo = Source.Archiver.GetFileInfo(SignatureFilename);
