@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 using MSAddonLib.Domain.AssetFiles;
 using MSAddonLib.Util.Persistence;
 using SevenZip;
 
 namespace MSAddonLib.Domain.Addon
 {
+    [Serializable]
     public sealed class VerbsSummary
     {
 
@@ -20,10 +22,12 @@ namespace MSAddonLib.Domain.Addon
 
         private const string CriteriumStringModelB = "modelB";
 
-        public VerbCollection Verbs { get; private set; }
+        public VerbCollection Verbs { get; set; }
 
+        [XmlIgnore]
         public AddonPackageSource AddonSource { get; private set; }
 
+        [XmlIgnore]
         public bool CompactDupVerbsByName { get; private set; }
 
 
@@ -878,18 +882,25 @@ namespace MSAddonLib.Domain.Addon
 
     public sealed class VerbCollection
     {
+        [XmlArrayItem("Verb")]
         public List<VerbSummaryItem> PropSoloVerbs { get; set; }
 
+        [XmlArrayItem("Verb")]
         public List<VerbSummaryItem> PuppetSoloVerbs { get; set; }
 
+        [XmlArrayItem("Verb")]
         public List<VerbSummaryItem> HeldPropsVerbs { get; set; }
 
+        [XmlArrayItem("Verb")]
         public List<VerbSummaryItem> InteractivePropsVerbs { get; set; }
 
+        [XmlArrayItem("Verb")]
         public List<VerbSummaryItem> PuppetMutualVerbs { get; set; }
 
+        [XmlArrayItem("Verb")]
         public List<VerbSummaryItem> Gaits { get; set; }
 
+        [XmlArrayItem("Verb")]
         public List<VerbSummaryItem> Gestures { get; set; }
 
 

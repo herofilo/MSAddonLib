@@ -65,133 +65,141 @@ namespace MSAddonLib.Domain.Addon
 
         // ------------------------------------------------------------------------------------------------------------------------------------
 
-        public AddonPackageSource Source { get; private set; }
+        public AddonPackageSource Source { get; set; }
 
         /// <summary>
         /// Name of the addon
         /// </summary>
+        [XmlIgnore]
         public string Name => AddonSignature.Name;
 
         /// <summary>
         /// Friendly name of the addon
         /// </summary>
-        public string FriendlyName => string.IsNullOrEmpty(_friendlyName) ? AddonSignature.Name : _friendlyName;
-
-        private string _friendlyName = "";
+        public string FriendlyName
+        {
+            get { return string.IsNullOrEmpty(_friendlyName) ? AddonSignature.Name : _friendlyName; }
+            set { _friendlyName = value; }
+        }
+        private string _friendlyName;
 
         /// <summary>
         /// Name of the account of the published
         /// </summary>
+        [XmlIgnore]
         public string Publisher => AddonSignature.Publisher;
 
         /// <summary>
         /// Qualified name of the addon
         /// </summary>
+        [XmlIgnore]
         public string QualifiedName => $"{Publisher}.{Name}";
 
 
         /// <summary>
         /// The addon is free, not requiring a license for its use in Moviestorm
         /// </summary>
+        [XmlIgnore]
         public bool Free => AddonSignature.Free;
 
         /// <summary>
         /// Description of the addon
         /// </summary>
+        [XmlIgnore]
         public string Description => AddonSignature.Description;
 
         /// <summary>
         /// Descriptive blurb for the addon
         /// </summary>
-        public string Blurb { get; private set; } = "";
+        public string Blurb { get; set; }
 
         /// <summary>
         /// Revision number of the addon
         /// </summary>
-        public string Revision { get; private set; } = "";
+        public string Revision { get; set; }
 
         /// <summary>
         /// Path to the source file/folder
         /// </summary>
-        public string Location { get; private set; }
+        public string Location { get; set; }
 
         /// <summary>
         /// Datetime of last modification of signations file
         /// </summary>
-        public DateTime? LastCompiled { get; private set; } = null;
+        public DateTime? LastCompiled { get; set; }
 
         /// <summary>
         /// Addon signature file of the addon
         /// </summary>
-        public AddonSignatureFile AddonSignature { get; private set; }
+        public AddonSignatureFile AddonSignature { get; set; }
 
         /// <summary>
         /// Asset manifest contents
         /// </summary>
-        public AssetManifest AssetManifest { get; private set; } = null;
+        public AssetManifest AssetManifest { get; set; }
 
         /// <summary>
         /// Size of the mesh data file in megabytes
         /// </summary>
-        public double? MeshDataSizeMbytes { get; private set; } = null;
+        public double? MeshDataSizeMbytes { get; set; }
 
         /// <summary>
         /// The addon contains Cal3D mesh files (.cmf)
         /// </summary>
-        public bool HasCal3DMeshFiles { get; private set; }
+        public bool HasCal3DMeshFiles { get; set; }
 
         /// <summary>
         /// The addon contains a signature file (required)
         /// </summary>
-        public bool HasSignatureFile { get; private set; } = false;
+        public bool HasSignatureFile { get; set; }
 
         /// <summary>
         /// The addon contains an asset data archive (required)
         /// </summary>
-        public bool HasAssetDataArchive { get; private set; } = false;
+        public bool HasAssetDataArchive { get; set; }
 
         /// <summary>
         /// The addon has a data folder (required)
         /// </summary>
-        public bool HasDataFolder { get; private set; } = false;
+        public bool HasDataFolder { get; set; }
 
         /// <summary>
         /// List of demo (starter) movies included
         /// </summary>
         [XmlArrayItem("Movie")]
-        public List<string> DemoMovies { get; private set; }
+        public List<string> DemoMovies { get; set; }
 
         /// <summary>
         /// List of stock assets
         /// </summary>
         [XmlArrayItem("Stock")]
-        public List<string> StockAssets { get; private set; }
+        public List<string> StockAssets { get; set; }
 
         /// <summary>
         /// The addon has a thumbnail image file
         /// </summary>
-        public bool HasThumbnail { get; private set; } = false;
+        public bool HasThumbnail { get; set; }
 
         /// <summary>
         /// The addon has a machine state file
         /// </summary>
-        public bool HasStateMachine { get; set; } = false;
+        public bool HasStateMachine { get; set; }
 
         /// <summary>
         /// The addon has a verb definition file
         /// </summary>
-        public bool HasVerbs { get; set; } = false;
+        public bool HasVerbs { get; set; }
 
 
         /// <summary>
         /// Summary info about body models
         /// </summary>
-        public BodyModelsSummary BodyModelsSummary { get; private set; }
+        public BodyModelsSummary BodyModelsSummary { get; set; }
 
         /// <summary>
         /// Summary info about prop models 
         /// </summary>
-        public PropModelsSummary PropModelsSummary { get; private set; }
+        public PropModelsSummary PropModelsSummary { get; set; }
 
         /// <summary>
         /// Summary info about animations
@@ -202,42 +210,44 @@ namespace MSAddonLib.Domain.Addon
         /// Sound files in the addon
         /// </summary>
         [XmlArrayItem("SoundFile")]
-        public List<string> Sounds { get; private set; }
+        public List<string> Sounds { get; set; }
 
         /// <summary>
         /// Filters in the addon
         /// </summary>
         [XmlArrayItem("Filter")]
-        public List<string> Filters { get; private set; }
+        public List<string> Filters { get; set; }
 
         /// <summary>
         /// Special effects in the addon
         /// </summary>
         [XmlArrayItem("SpecialEffect")]
-        public List<string> SpecialEffects { get; private set; }
+        public List<string> SpecialEffects { get; set; }
 
         /// <summary>
         /// Materials in the addon
         /// </summary>
         [XmlArrayItem("Material")]
-        public List<string> Materials { get; private set; }
+        public List<string> Materials { get; set; }
 
         /// <summary>
         /// Sky textures in the addon
         /// </summary>
         [XmlArrayItem("Sky")]
-        public List<string> SkyTextures { get; private set; }
+        public List<string> SkyTextures { get; set; }
 
         // --------------------------
 
         /// <summary>
         /// The addon has some issue
         /// </summary>
+        [XmlIgnore]
         public bool HasIssues => !string.IsNullOrEmpty(_issuesStringBuilder.ToString());
 
         /// <summary>
         /// Text of the issues
         /// </summary>
+        [XmlIgnore]
         public string Issues { get { return _issuesStringBuilder.ToString(); } }
 
 
@@ -418,8 +428,7 @@ namespace MSAddonLib.Domain.Addon
 
                 if (!(_verbSummaryPopulationOk = VerbsSummary.PopulateSummary(out errorText)))
                 {
-                    // Ignore at this moment
-                    // throw new Exception(errorText);
+                    _issuesStringBuilder.AppendLine($"VerbsSummary: {errorText}");
                 }
             }
 
@@ -886,7 +895,6 @@ namespace MSAddonLib.Domain.Addon
             if (assetManifest == null)
                 throw new Exception(errorText);
 
-            // bool loadAllAnimationFiles = ListAllAnimationFiles || !HasVerbs;
             BodyModelsSummary = new BodyModelsSummary(Source, pTemporaryFolder, assetManifest.BodyModels, ListAllAnimationFiles, ListGestureGaitsAnimationFiles);
             if (!BodyModelsSummary.PopulateSummary(out errorText))
             {

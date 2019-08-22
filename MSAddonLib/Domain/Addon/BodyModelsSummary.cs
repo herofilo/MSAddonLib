@@ -14,11 +14,12 @@ namespace MSAddonLib.Domain.Addon
     /// <summary>
     /// Compiles a summary of all information regarding to Body models in the addon
     /// </summary>
+    [Serializable]
     public sealed class BodyModelsSummary
     {
-        public BodyModelSumPuppets Puppets { get; private set; }
+        public BodyModelSumPuppets Puppets { get;  set; }
 
-
+        [XmlIgnore]
         public AddonPackageSource AddonSource { get; private set; }
 
         // private SevenZipArchiver Archiver { get; set; }
@@ -313,10 +314,11 @@ namespace MSAddonLib.Domain.Addon
 
     // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+    [Serializable]
     public sealed class BodyModelSumPuppets
     {
-        public List<BodyModelSumPuppet> Puppets { get; private set; }
+        [XmlArrayItem("Puppet")]
+        public List<BodyModelSumPuppet> Puppets { get; set; }
 
         [XmlIgnore]
         public SevenZipArchiver Archiver { get; private set; }
@@ -378,12 +380,15 @@ namespace MSAddonLib.Domain.Addon
 
     // ---------------------------------------------------------------------------------------------------------------------
 
+    [Serializable]
     public sealed class BodyModelSumPuppet
     {
         public string PuppetName { get; set; }
 
+        [XmlArrayItem("BodyPart")]
         public List<BodyModelSumBodyPart> BodyParts { get; set; }
 
+        [XmlArrayItem("Animation")]
         public List<string> Animations { get; set; }
 
         // public List<string> GestureAndGaitsVerbs { get; set; }
@@ -392,6 +397,7 @@ namespace MSAddonLib.Domain.Addon
 
         public int OtherAnimations { get; set; } = 0;
 
+        [XmlArrayItem("Decal")]
         public List<BodyModelSumDecal> Decals { get; set; }
 
         public string PuppetPath => $"Data/Puppets/{PuppetName}".ToLower();
@@ -569,6 +575,7 @@ namespace MSAddonLib.Domain.Addon
 
     // ---------------------------------------------------------------------------------------------------------------------
 
+    [Serializable]
     public sealed class BodyModelSumBodyPart
     {
         private SevenZipArchiver _Archiver;
@@ -749,7 +756,7 @@ namespace MSAddonLib.Domain.Addon
 
     // ---------------------------------------------------------------------------------------------------------------------
 
-
+    [Serializable]
     public sealed class BodyModelSumDecal
     {
         public string DecalName { get; set; }

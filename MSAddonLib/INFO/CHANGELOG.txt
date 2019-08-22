@@ -1,7 +1,6 @@
 
 MSAddonLib - Version History
 --------------------------------
-
 * v1.2.0 (20190821):
 	- SevenZipArchiver: new method GetFileInfo()
 	- AddonPackage:

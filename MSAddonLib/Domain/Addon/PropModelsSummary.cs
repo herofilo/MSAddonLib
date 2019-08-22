@@ -8,10 +8,12 @@ using MSAddonLib.Util.Persistence;
 
 namespace MSAddonLib.Domain.Addon
 {
+    [Serializable]
     public sealed class PropModelsSummary
     {
-        public PropModelSumProps Props { get; private set; }
+        public PropModelSumProps Props { get; set; }
 
+        [XmlIgnore]
         public AddonPackageSource AddonSource { get; private set; }
 
         private string TempFolderPath { get; set; }
@@ -215,7 +217,8 @@ namespace MSAddonLib.Domain.Addon
 
     public sealed class PropModelSumProps
     {
-        public List<PropModelSumProp> Props { get; private set; }
+        [XmlArrayItem("Prop")]
+        public List<PropModelSumProp> Props { get;  set; }
 
         [XmlIgnore]
         public SevenZipArchiver Archiver { get; private set; }

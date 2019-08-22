@@ -12,12 +12,12 @@ namespace MSAddonLib.Domain.Addon
     [Serializable]
     public sealed class AddonPackageSource
     {
-        public AddonPackageSourceType SourceType { get; private set; } = AddonPackageSourceType.Invalid;
+        public AddonPackageSourceType SourceType { get; set; } = AddonPackageSourceType.Invalid;
 
         [XmlIgnore]
         public SevenZipArchiver Archiver { get; private set; }
 
-        public string SourcePath { get; private set; }
+        public string SourcePath { get; set; }
 
         // -----------------------------------------------------------------------------------------------------------------------------------------------
 
