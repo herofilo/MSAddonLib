@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Xml.Serialization;
 using MSAddonLib.Domain;
@@ -14,12 +15,28 @@ namespace SerializeAddonPackage
     {
         static void Main(string[] args)
         {
+
+            // Test01();
+            // return;
+
             string errorText;
             Utils.ResetTempFolder(out errorText);
 
             DoSerializeAddonPackage();
         }
 
+        private static void Test01()
+        {
+            Exception exception3 = new Exception("Inner3 exception");
+            Exception exception2 = new Exception("Inner2 exception", exception3);
+            Exception exception1 = new Exception("Inner1 exception", exception2);
+            Exception exception = new Exception("Exception level 0", exception1);
+
+            string fullMessage = Utils.GetExceptionFullMessage(exception);
+
+            string extendedMessage = Utils.GetExceptionExtendedMessage(exception);
+
+        }
 
 
         private static void DoSerializeAddonPackage()
@@ -46,7 +63,7 @@ namespace SerializeAddonPackage
             }
             catch (Exception exception)
             {
-                errorText = Utils.GetExceptionExtendedMessage(exception);
+                errorText = Utils.GetExceptionFullMessage(exception);
             }
 
 

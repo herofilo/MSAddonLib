@@ -323,6 +323,24 @@ namespace MSAddonLib.Util
         }
 
 
+        public static string GetExceptionFullMessage(Exception pException)
+        {
+            return _GetExceptionFullMessage(pException, null);
+        }
+
+
+        private static string _GetExceptionFullMessage(Exception pException, string pText)
+        {
+            if (pException.InnerException == null)
+                return pException.Message;
+
+            string innerText = _GetExceptionFullMessage(pException.InnerException, null);
+
+            return $"{pException.Message} [{innerText}]";
+        }
+
+
+
         // -------------------------------------------------------------------------------------------------------
 
         /// <summary>
