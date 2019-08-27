@@ -1,6 +1,12 @@
 
 MSAddonLib - Version History
 --------------------------------
+
+* v1.2.2 (20190827):
+	- AddonPackage:
+		Throws an exception if the temporary folder is invalid or can't be found
+		Prints the last compilation date/time
+
 * v1.2.1 (20190826):
 	- Utils: new method GetExceptionFullMessage()
 

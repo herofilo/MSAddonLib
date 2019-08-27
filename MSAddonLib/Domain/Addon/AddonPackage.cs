@@ -367,6 +367,8 @@ namespace MSAddonLib.Domain.Addon
             if (Source.SourceType == AddonPackageSourceType.Invalid)
                 throw new Exception("Invalid source type for the addon");
 
+            if (string.IsNullOrEmpty(pTemporaryFolder = pTemporaryFolder.Trim()) || !Directory.Exists(pTemporaryFolder))
+                throw new Exception("No temporary folder found");
 
             Location = Source.SourcePath;
 
@@ -1153,6 +1155,8 @@ namespace MSAddonLib.Domain.Addon
             // summary.AppendLine(string.Format("FriendlyName: {0}", _friendlyName));
             summary.AppendLine(string.Format("    Publisher: {0}", Publisher));
             summary.AppendLine(string.Format("    Free: {0}", Free));
+            if(LastCompiled.HasValue)
+                summary.AppendLine(string.Format($"    Last compiled: {LastCompiled.Value:u}"));
             if (!string.IsNullOrEmpty(Description))
             {
                 bool firstLine = true;
@@ -1174,8 +1178,8 @@ namespace MSAddonLib.Domain.Addon
                 }
             }
 
-            if (!string.IsNullOrEmpty(Blurb.Trim()) &&
-                (string.IsNullOrEmpty(Description?.Trim()) || (Blurb.Trim() != Description?.Trim())))
+            if (!string.IsNullOrEmpty(Blurb?.Trim()) &&
+                (string.IsNullOrEmpty(Description?.Trim()) || (Blurb?.Trim() != Description?.Trim())))
             {
                 bool firstLine = true;
                 foreach (string line in Blurb.Split("\n".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
@@ -1195,7 +1199,8 @@ namespace MSAddonLib.Domain.Addon
                     }
                 }
             }
-            summary.AppendLine(string.Format("    Revision: {0}", Revision));
+            if(!string.IsNullOrEmpty(Revision))
+                summary.AppendLine(string.Format("    Revision: {0}", Revision));
             // summary.AppendLine(string.Format("Path: {0}", _addonPath));
             if (MeshDataSizeMbytes.HasValue && (MeshDataSizeMbytes.Value > 0))
             {
