@@ -1,6 +1,18 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.3.0 (20190831)
+	AddonPackage:
+		- new property AddonFormat
+		- constructors reengineered:
+			Now the path parameter can refer to an addon file, in addition to an addon folder
+			Constructors have been merged, by allowing to omitting the specification of a temporary folder
+		- verification of temporary folder has been moved to the LoadAddonPackage() method
+	PropModelsSummary:
+		- method AppendBodyModelItem() renamed to AppendPropModelItem()
+		- PropModelSumProp: added Tags list
+	BodyModelsSummary:
+		- BodyModelSumBodyPart: Tags are now correctly loaded
 
 * v1.2.2 (20190827):
 	- AddonPackage:

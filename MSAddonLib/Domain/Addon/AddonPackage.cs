@@ -95,6 +95,11 @@ namespace MSAddonLib.Domain.Addon
         [XmlIgnore]
         public string QualifiedName => $"{Publisher}.{Name}";
 
+        /// <summary>
+        /// Presentation format of the addon
+        /// </summary>
+        public AddonPackageFormat AddonFormat { get; set; } = AddonPackageFormat.Unknown;
+
 
         /// <summary>
         /// The addon is free, not requiring a license for its use in Moviestorm
@@ -292,22 +297,21 @@ namespace MSAddonLib.Domain.Addon
         /// <param name="pArchiver">Archiver for accessing the addon archive contents</param>
         /// <param name="pProcessingFlags">Processing flags</param>
         /// <param name="pTemporaryFolder">Path to the root temporary folder</param>
-        public AddonPackage(SevenZipArchiver pArchiver, ProcessingFlags pProcessingFlags, string pTemporaryFolder)
+        public AddonPackage(SevenZipArchiver pArchiver, ProcessingFlags pProcessingFlags, string pTemporaryFolder = null)
         {
             if (pArchiver == null)
             {
                 throw new Exception("Not a valid archiver");
             }
 
-            Source = new AddonPackageSource(pArchiver);
-
-
             if (pArchiver.ArchivedFileList(out _addonFileList) < 0)
             {
                 throw new Exception($"Error extracting the list of archived files: {pArchiver.LastErrorText}");
             }
 
-            
+            Source = new AddonPackageSource(pArchiver);
+
+            AddonFormat = AddonPackageFormat.PackageFile;
 
             LoadAddonPackage(pProcessingFlags, pTemporaryFolder);
         }
@@ -316,56 +320,58 @@ namespace MSAddonLib.Domain.Addon
         /// <summary>
         /// Full information about the addon
         /// </summary>
-        /// <param name="pFolderPath">Path of the folder containing the addon</param>
+        /// <param name="pPath">Path of the folder/file containing the addon</param>
         /// <param name="pProcessingFlags">Processing flags</param>
         /// <param name="pTemporaryFolder">Path to the root temporary folder</param>
-        public AddonPackage(string pFolderPath, ProcessingFlags pProcessingFlags)
+        public AddonPackage(string pPath, ProcessingFlags pProcessingFlags, string pTemporaryFolder = null)
         {
-            if (string.IsNullOrEmpty(pFolderPath = pFolderPath.Trim()))
+            if (string.IsNullOrEmpty(pPath = pPath.Trim()))
             {
-                throw new Exception("Not a valid folder specification");
+                throw new Exception("Not a valid path specification");
             }
 
-            string folderPath = (Path.IsPathRooted(pFolderPath)) ? pFolderPath : Path.GetFullPath(pFolderPath);
-            if (!Directory.Exists(folderPath))
+            string path = (Path.IsPathRooted(pPath)) ? pPath : Path.GetFullPath(pPath);
+            if (path.ToLower().EndsWith(".addon"))
             {
-                throw new Exception("Folder not found");
+                if (!File.Exists(path))
+                {
+                    throw new Exception("File not found");
+                }
+                SevenZipArchiver archiver = new SevenZipArchiver(path);
+                if (archiver.ArchivedFileList(out _addonFileList) < 0)
+                {
+                    throw new Exception($"Error extracting the list of archived files: {archiver.LastErrorText}");
+                }
+                Source = new AddonPackageSource(archiver);
+                AddonFormat = AddonPackageFormat.PackageFile;
             }
-            Source = new AddonPackageSource(folderPath);
-
-            LoadAddonPackage(pProcessingFlags, Utils.GetTempDirectory());
-        }
-
-
-
-        /// <summary>
-        /// Full information about the addon
-        /// </summary>
-        /// <param name="pFolderPath">Path of the folder containing the addon</param>
-        /// <param name="pProcessingFlags">Processing flags</param>
-        /// <param name="pTemporaryFolder">Path to the root temporary folder</param>
-        public AddonPackage(string pFolderPath, ProcessingFlags pProcessingFlags, string pTemporaryFolder)
-        {
-            if (string.IsNullOrEmpty(pFolderPath = pFolderPath.Trim()))
+            else
             {
-                throw new Exception("Not a valid folder specification");
+                if (!Directory.Exists(path))
+                {
+                    throw new Exception("Folder not found");
+                }
+                Source = new AddonPackageSource(path);
+                AddonFormat = AddonPackageFormat.InstalledFolder;
             }
-
-            string folderPath = (Path.IsPathRooted(pFolderPath)) ? pFolderPath : Path.GetFullPath(pFolderPath);
-            if (!Directory.Exists(folderPath))
-            {
-                throw new Exception("Folder not found");
-            }
-            Source = new AddonPackageSource(folderPath);
 
             LoadAddonPackage(pProcessingFlags, pTemporaryFolder);
         }
+
+
+        // ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
         private bool LoadAddonPackage(ProcessingFlags pProcessingFlags, string pTemporaryFolder)
         {
             if (Source.SourceType == AddonPackageSourceType.Invalid)
                 throw new Exception("Invalid source type for the addon");
+
+            // Validate and check temporary folder (mandatory)
+            if (string.IsNullOrEmpty(pTemporaryFolder = pTemporaryFolder?.Trim()))
+                pTemporaryFolder = Utils.GetTempDirectory();
+            else
+                pTemporaryFolder = (Path.IsPathRooted(pTemporaryFolder)) ? pTemporaryFolder : Path.GetFullPath(pTemporaryFolder);
 
             if (string.IsNullOrEmpty(pTemporaryFolder = pTemporaryFolder.Trim()) || !Directory.Exists(pTemporaryFolder))
                 throw new Exception("No temporary folder found");
@@ -1311,8 +1317,15 @@ namespace MSAddonLib.Domain.Addon
 
     }
 
-
-
+    /// <summary>
+    /// Presentation format of the addon
+    /// </summary>
+    public enum AddonPackageFormat
+    {
+        Unknown,
+        PackageFile,
+        InstalledFolder
+    }
 
 
     sealed class CheckContentsInFileResult

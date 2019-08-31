@@ -623,7 +623,7 @@ namespace MSAddonLib.Domain.Addon
 
             FilePath = pItem.DescriptionFilePath;
             BodyPartType = pItem.PartsCovered;
-            Tags = pItem.Tags;
+            // Tags = pItem.Tags;
 
             string fileContents = _Archiver.ExtractArchivedFileToString(FilePath.Replace("/", "\\"));
             if (fileContents == null)
@@ -665,6 +665,12 @@ namespace MSAddonLib.Domain.Addon
 
             BodyPartName = bodyPart.name;
             Description = bodyPart.description;
+            if ((bodyPart.tags != null) && (bodyPart.tags.Length > 0))
+            {
+                Tags = new List<string>();
+                foreach(string tag in bodyPart.tags)
+                    Tags.Add(tag);
+            }
 
             return true;
         }
@@ -683,6 +689,12 @@ namespace MSAddonLib.Domain.Addon
             if ((bodyPart.morphTargets != null) && (bodyPart.morphTargets.Length > 0))
                 Morphable = true;
 
+            if ((bodyPart.tags != null) && (bodyPart.tags.Length > 0))
+            {
+                Tags = new List<string>();
+                foreach (string tag in bodyPart.tags)
+                    Tags.Add(tag);
+            }
 
             if ((bodyPart.decals != null) && (bodyPart.decals.Length > 0))
             {

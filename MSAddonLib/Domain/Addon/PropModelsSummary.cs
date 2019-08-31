@@ -76,7 +76,7 @@ namespace MSAddonLib.Domain.Addon
                     if (Props == null)
                         Props = new PropModelSumProps(assetDataArchiver);
 
-                    if (!Props.AppendBodyModelItem(item, out pErrorText))
+                    if (!Props.AppendPropModelItem(item, out pErrorText))
                     {
                         isOk = false;
                         break;
@@ -257,7 +257,7 @@ namespace MSAddonLib.Domain.Addon
             return null;
         }
 
-        public bool AppendBodyModelItem(PropModelItem pPropModelItem, out string pErrorText)
+        public bool AppendPropModelItem(PropModelItem pPropModelItem, out string pErrorText)
         {
             // string puppetName = pBodyModelItem.PuppetName;
             PropModelSumProp prop = null;
@@ -288,6 +288,8 @@ namespace MSAddonLib.Domain.Addon
         public string PropType { get; set; } = "Prop";
 
         public string Description { get; set; }
+
+        public List<string> Tags { get; set; }
 
         public string AutoAnimation { get; set; }
 
@@ -419,6 +421,13 @@ namespace MSAddonLib.Domain.Addon
 
             if (Variants != null)
                 DefaultVariant = modelDescriptor.defaultVariant;
+
+            if ((modelDescriptor.tags != null) && (modelDescriptor.tags.Length > 0))
+            {
+                Tags = new List<string>();
+                foreach (string tag in modelDescriptor.tags)
+                    Tags.Add(tag);
+            }
 
 
             if (modelDescriptor.attributes != null)
