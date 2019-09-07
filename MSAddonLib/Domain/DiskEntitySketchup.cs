@@ -7,7 +7,7 @@ namespace MSAddonLib.Domain
 {
     public class DiskEntitySketchup : DiskEntityBase, IDiskEntity
     {
-        public DiskEntitySketchup(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
+        public DiskEntitySketchup(string pEntityPath, string pArchivedPath, IReportWriter pReportWriter) : base(pEntityPath, pArchivedPath, pReportWriter)
         {
         }
 

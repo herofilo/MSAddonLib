@@ -75,6 +75,11 @@
     <Compile Include="Domain\DiskEntityType.cs" />
     <Compile Include="Domain\IDiskEntity.cs" />
     <Compile Include="Domain\ProcessingFlags.cs" />
+    <Compile Include="Persistence\AddonDB\AddonAssetType.cs" />
+    <Compile Include="Persistence\AddonDB\AddonPackageSet.cs" />
+    <Compile Include="Persistence\AddonDB\AddonSearchCriteria.cs" />
+    <Compile Include="Persistence\AddonDB\AssetSearchCriteria.cs" />
+    <Compile Include="Persistence\AddonDB\AssetSearchResultItem.cs" />
     <Compile Include="Persistence\FormReportWriter.cs" />
     <Compile Include="Persistence\IReportWriter.cs" />
     <Compile Include="Persistence\NullReportWriter.cs" />
@@ -85,7 +90,6 @@
     <Compile Include="Util\Persistence\SevenZipArchiver.cs" />
     <Compile Include="Util\Utils.cs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <Content Include="7z.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -231,7 +231,7 @@ namespace MSAddonLib.Domain.Addon
 
         public override string ToString()
         {
-            if (!_initialized || (Puppets == null) || (Puppets?.Puppets.Count == 0))
+            if ((Puppets == null) || (Puppets?.Puppets.Count == 0))
                 return "";
 
             StringBuilder textBuilder = new StringBuilder();

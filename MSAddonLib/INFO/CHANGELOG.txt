@@ -1,6 +1,14 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.5.0 (20190907):
+	DiskEntityFolder: new property ArchivedPath, for specifying the full path of an archived entity
+	AddonPackageSource: new property ArchivedPath
+	AddonPackage: 
+		Constructor now takes an additional optional argument: AddonPackage(SevenZipArchiver pArchiver, ProcessingFlags pProcessingFlags, string pTemporaryFolder = null, string pArchivedPath = null)
+		Location now returns the real location of the addon, ie, its archived path if that's the case
+	Lots of changes and additions for supporting a persistent database of addons and their assets
+
 * v1.3.0 (20190831)
 	AddonPackage:
 		- new property AddonFormat

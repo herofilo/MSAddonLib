@@ -185,17 +185,23 @@ namespace MSAddonLib.Util.Persistence
 
     public class MoviestormPaths
     {
-        public string InstallationPath { get; private set; }
+        public string InstallationPath { get; set; }
 
-        public string ContentPacksPath { get; private set; }
+        public string ContentPacksPath { get; set; }
 
-        public string PreviewsPath { get; private set; }
+        public string PreviewsPath { get;  set; }
 
-        public string UserDataPath { get; private set; }
+        public string UserDataPath { get;  set; }
 
-        public string AddonsPath { get; private set; }
+        public string AddonsPath { get;  set; }
 
-        public string MoviesPath { get; private set; }
+        public string MoviesPath { get; set; }
+
+
+        public MoviestormPaths()
+        {
+
+        }
 
 
         public MoviestormPaths(string pInstallationPath, string pUserDataPath)

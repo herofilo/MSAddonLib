@@ -162,7 +162,7 @@ namespace MSAddonLib.Domain.Addon
 
         public override string ToString()
         {
-            if (!_initialized || (Props == null) || (Props?.Props.Count == 0))
+            if ((Props == null) || (Props?.Props.Count == 0))
                 return "";
 
 

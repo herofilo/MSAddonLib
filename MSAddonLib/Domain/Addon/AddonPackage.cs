@@ -126,12 +126,19 @@ namespace MSAddonLib.Domain.Addon
         /// <summary>
         /// Path to the source file/folder
         /// </summary>
-        public string Location { get; set; }
+        [XmlIgnore]
+        public string Location => Source.ArchivedPath ?? Source.SourcePath;
 
         /// <summary>
         /// Datetime of last modification of signations file
         /// </summary>
         public DateTime? LastCompiled { get; set; }
+
+        /// <summary>
+        /// Can be recompiled
+        /// </summary>
+        [XmlIgnore]
+        public bool Recompilable => (MeshDataSizeMbytes == null) || (MeshDataSizeMbytes == 0.0) || HasCal3DMeshFiles;
 
         /// <summary>
         /// Addon signature file of the addon
@@ -297,7 +304,8 @@ namespace MSAddonLib.Domain.Addon
         /// <param name="pArchiver">Archiver for accessing the addon archive contents</param>
         /// <param name="pProcessingFlags">Processing flags</param>
         /// <param name="pTemporaryFolder">Path to the root temporary folder</param>
-        public AddonPackage(SevenZipArchiver pArchiver, ProcessingFlags pProcessingFlags, string pTemporaryFolder = null)
+        /// <param name="pArchivedPath">Path of archived file</param>
+        public AddonPackage(SevenZipArchiver pArchiver, ProcessingFlags pProcessingFlags, string pTemporaryFolder = null, string pArchivedPath = null)
         {
             if (pArchiver == null)
             {
@@ -309,7 +317,7 @@ namespace MSAddonLib.Domain.Addon
                 throw new Exception($"Error extracting the list of archived files: {pArchiver.LastErrorText}");
             }
 
-            Source = new AddonPackageSource(pArchiver);
+            Source = new AddonPackageSource(pArchiver, pArchivedPath);
 
             AddonFormat = AddonPackageFormat.PackageFile;
 
@@ -376,7 +384,7 @@ namespace MSAddonLib.Domain.Addon
             if (string.IsNullOrEmpty(pTemporaryFolder = pTemporaryFolder.Trim()) || !Directory.Exists(pTemporaryFolder))
                 throw new Exception("No temporary folder found");
 
-            Location = Source.SourcePath;
+            // Location = string.IsNullOrEmpty(Source.ArchivedPath) ? Source.SourcePath : Source.ArchivedPath;
 
             // bool isFolderAddon = Source.SourceType == AddonPackageSourceType.Folder;
 
@@ -1218,14 +1226,14 @@ namespace MSAddonLib.Domain.Addon
                 summary.AppendLine("    No meshes");
             if (HasThumbnail)
                 summary.AppendLine("    Has Thumbnail image");
-            if (DemoMovies != null)
+            if ((DemoMovies != null) && (DemoMovies.Count > 0))
             {
                 summary.AppendLine("    * Includes Demo Movies:");
                 foreach (string item in DemoMovies)
                     summary.AppendLine($"         '{item}'");
             }
 
-            if (StockAssets != null)
+            if ((StockAssets != null) && (StockAssets.Count > 0))
             {
                 summary.AppendLine("    * Includes Stock assets:");
                 foreach (string item in StockAssets)

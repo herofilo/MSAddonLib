@@ -9,7 +9,7 @@ namespace MSAddonLib.Domain
 {
     public class DiskEntityAddon : DiskEntityBase, IDiskEntity
     {
-        public DiskEntityAddon(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
+        public DiskEntityAddon(string pEntityPath, string pArchivedPath, IReportWriter pReportWriter) : base(pEntityPath, pArchivedPath, pReportWriter)
         {
         }
 
@@ -47,6 +47,7 @@ namespace MSAddonLib.Domain
         {
             bool reportOnlyIssues = pProcessingFlags.HasFlag(ProcessingFlags.JustReportIssues);
             bool showAddonContents = pProcessingFlags.HasFlag(ProcessingFlags.ShowAddonContents);
+            bool appendToPackageSet = pProcessingFlags.HasFlag(ProcessingFlags.AppendToAddonPackageSet);
             List<ArchiveFileInfo> entryList;
 
             SevenZipArchiver archiver = new SevenZipArchiver(AbsolutePath);
@@ -87,15 +88,24 @@ namespace MSAddonLib.Domain
                     pReport += " (incl. Stock assets)";
                 string freeText = addonSignature.Free ? "" : "  NOT FREE!";
                 pReport += $"   [{addonSignature.Publisher}{freeText}]";
-                return true;
+                if(!appendToPackageSet)
+                    return true;
             }
 
             string tempPath = Utils.GetTempDirectory();
 
             
-            AddonPackage package = new AddonPackage(archiver, pProcessingFlags, tempPath);
+            AddonPackage package = new AddonPackage(archiver, pProcessingFlags, tempPath, ArchivedPath);
 
-            pReport = package?.ToString();
+            if (showAddonContents)
+                pReport = package?.ToString();
+
+            if (appendToPackageSet && (AddonPackageSet != null) && (package != null) && (!package.HasIssues))
+            {
+                if (AddonPackageSet.Append(package, pProcessingFlags.HasFlag(ProcessingFlags.AppendToAddonPackageSetForceRefresh)))
+                    pReport += " >>> Inserted/updated into Database";
+            }
+
 
             return true;
         }
