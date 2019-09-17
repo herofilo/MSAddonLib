@@ -183,7 +183,7 @@ namespace MSAddonLib.Util.Persistence
     }
 
 
-    public class MoviestormPaths
+    public class MoviestormPaths : ICloneable
     {
         public string InstallationPath { get; set; }
 
@@ -212,6 +212,11 @@ namespace MSAddonLib.Util.Persistence
             UserDataPath = pUserDataPath;
             AddonsPath = Path.Combine(UserDataPath, "AddOn");
             MoviesPath = Path.Combine(UserDataPath, "Movies");
+        }
+
+        public object Clone()
+        {
+            return MemberwiseClone();
         }
     }
 

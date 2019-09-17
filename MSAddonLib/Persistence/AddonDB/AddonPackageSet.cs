@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Windows.Forms;
 using System.Xml.Serialization;
 using MSAddonLib.Domain;
 using MSAddonLib.Domain.Addon;
@@ -11,12 +12,17 @@ using MSAddonLib.Util.Persistence;
 namespace MSAddonLib.Persistence.AddonDB
 {
     [Serializable]
-    public sealed class AddonPackageSet
+    public sealed class AddonPackageSet : ICloneable
     {
+        public const string DefaultAddonPackageSetName = "AddonPackageSet";
 
         public const string DefaultAddonPackageSetFileName = "AddonPackageSet.scat";
 
-        public const string CurrentCatalogueVersion = "1.0";
+        public const string AddonPackageSetFileExtension = ".scat";
+
+        public const string DefaultAddonPackageSet = "AddonPackageSet";
+
+        public const string CurrentCatalogueVersion = "1.4";
 
 
         public MoviestormPaths MoviestormPaths
@@ -31,9 +37,11 @@ namespace MSAddonLib.Persistence.AddonDB
         }
         private MoviestormPaths _moviestormPaths;
 
-        public string CatalogueVersion { get; set; } = CurrentCatalogueVersion;
+        public string CatalogueVersion { get; set; }
 
         public List<string> AddonSources { get; set; }
+
+        public string Description { get; set; }
 
 
         public List<AddonPackage> Addons { get; set; }
@@ -48,23 +56,25 @@ namespace MSAddonLib.Persistence.AddonDB
         }
 
 
-        public AddonPackageSet(List<string> pSources)
+        public AddonPackageSet(List<string> pSources, string pDescription = null)
         {
-            Initialize(null, pSources);
+            Initialize(null, pSources, pDescription);
         }
 
 
-        public AddonPackageSet(MoviestormPaths pMoviestormPaths, List<string> pSources)
+        public AddonPackageSet(MoviestormPaths pMoviestormPaths, List<string> pSources, string pDescription = null)
         {
-            Initialize(pMoviestormPaths, pSources);
+            Initialize(pMoviestormPaths, pSources, pDescription);
         }
 
 
-        private void Initialize(MoviestormPaths pMoviestormPaths, List<string> pSources)
+        private void Initialize(MoviestormPaths pMoviestormPaths, List<string> pSources, string pDescription)
         {
             string errorText;
             MoviestormPaths = pMoviestormPaths ?? AddonPersistenceUtils.GetMoviestormPaths(out errorText);
             AddonSources = pSources;
+            Description = pDescription;
+            CatalogueVersion = CurrentCatalogueVersion;
             LastUpdate = DateTime.Now;
         }
 
@@ -73,8 +83,8 @@ namespace MSAddonLib.Persistence.AddonDB
         public static AddonPackageSet Load(out string pErrorText, string pFilename = null)
         {
             pErrorText = null;
-            if (string.IsNullOrEmpty(pFilename = pFilename?.Trim()))
-                pFilename = DefaultAddonPackageSetFileName;
+            pFilename = GetFileName(pFilename);
+
             if (!File.Exists(pFilename))
             {
                 return null;
@@ -90,6 +100,7 @@ namespace MSAddonLib.Persistence.AddonDB
                     addonCatalogue = (AddonPackageSet)serializer.Deserialize(reader);
                     reader.Close();
                 }
+                CheckAndUpdateVersion(addonCatalogue, pFilename);
             }
             catch (Exception exception)
             {
@@ -99,8 +110,75 @@ namespace MSAddonLib.Persistence.AddonDB
             return addonCatalogue;
         }
 
+        private static void CheckAndUpdateVersion(AddonPackageSet pAddonPackageSet, string pFilename)
+        {
+            string catalogueVersion = pAddonPackageSet.CatalogueVersion?.Trim();
+
+            bool needsRecreatingAddonSummaries = false;
+            bool needsUpdatingCatalogueVersion = false;
+
+            uint catalogueVersionNumber = VersionNumber(catalogueVersion);
+            uint currentCatalogueVersionNumber = VersionNumber(CurrentCatalogueVersion);
+
+            if (catalogueVersionNumber < currentCatalogueVersionNumber)
+            {
+                needsUpdatingCatalogueVersion = true;
+            }
+            if (catalogueVersionNumber < 0x010400)
+            {
+                needsRecreatingAddonSummaries = true;
+            }
+
+            if (needsRecreatingAddonSummaries)
+            {
+                RecreateAddonSummaries(pAddonPackageSet);
+            }
+
+            if (needsUpdatingCatalogueVersion)
+            {
+                pAddonPackageSet.CatalogueVersion = CurrentCatalogueVersion;
+                string errorText;
+                pAddonPackageSet.Save(out errorText, pFilename);
+            }
+        }
 
 
+        private static uint VersionNumber(string pVersion)
+        {
+            if (string.IsNullOrEmpty(pVersion = pVersion?.Trim()))
+                return 0;
+
+            string[] parts = pVersion.Split(".".ToCharArray());
+            uint number;
+            try
+            {
+                number = Convert.ToUInt32(parts[0]) << 16;
+                if(parts.Length > 1)
+                    number += Convert.ToUInt32(parts[1]) << 8;
+                if (parts.Length > 2)
+                    number += Convert.ToUInt32(parts[2]);
+            }
+            catch
+            {
+                return 0;
+            }
+
+            return number;
+        }
+
+
+        // Required because of the introduction of AddonPackage.AssetSummary in 1.5.3
+        private static void RecreateAddonSummaries(AddonPackageSet pAddonPackageSet)
+        {
+            if ((pAddonPackageSet.Addons == null) || (pAddonPackageSet.Addons.Count == 0))
+                return;
+
+            foreach (AddonPackage addon in pAddonPackageSet.Addons)
+            {
+                addon.UpdateAssetSummary();
+            }
+            pAddonPackageSet.LastUpdate = DateTime.Now;
+        }
 
 
         /// <summary>
@@ -111,8 +189,9 @@ namespace MSAddonLib.Persistence.AddonDB
         public bool Save(out string pErrorText, string pFilename = null)
         {
             pErrorText = null;
-            if (string.IsNullOrEmpty(pFilename = pFilename?.Trim()))
-                pFilename = DefaultAddonPackageSetFileName;
+
+            pFilename = GetFileName(pFilename);
+
             try
             {
                 XmlSerializer serializer = new XmlSerializer(this.GetType());
@@ -132,6 +211,23 @@ namespace MSAddonLib.Persistence.AddonDB
         }
 
 
+        private static string GetFileName(string pFilename)
+        {
+            if (string.IsNullOrEmpty(pFilename = pFilename?.Trim()))
+                return DefaultAddonPackageSetFileName;
+
+            pFilename = Path.GetFileNameWithoutExtension(pFilename);
+            if (string.IsNullOrEmpty(pFilename = pFilename?.Trim()))
+                return DefaultAddonPackageSetFileName;
+
+            if (!pFilename.ToLower().EndsWith(AddonPackageSetFileExtension))
+                pFilename += AddonPackageSetFileExtension;
+
+            return pFilename;
+        }
+
+
+
         // ------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -139,6 +235,14 @@ namespace MSAddonLib.Persistence.AddonDB
         {
             return false;
         }
+
+
+        public void SetDescription(string pText)
+        {
+            Description = pText;
+            LastUpdate = DateTime.Now;
+        }
+
 
 
         public bool Append(AddonPackage pPackage, bool pRefresh = true)
@@ -205,7 +309,7 @@ namespace MSAddonLib.Persistence.AddonDB
             List<AddonPackage> addons = new List<AddonPackage>();
             foreach (AddonPackage addon in Addons)
             {
-                if(!addon.Location.StartsWith(pPath, StringComparison.InvariantCultureIgnoreCase))
+                if (!addon.Location.StartsWith(pPath, StringComparison.InvariantCultureIgnoreCase))
                     addons.Add(addon);
             }
 
@@ -271,7 +375,7 @@ namespace MSAddonLib.Persistence.AddonDB
             if (string.IsNullOrEmpty(pLocation = pLocation?.Trim().ToLower()) || (Addons == null))
                 return null;
 
-            foreach(AddonPackage addon in Addons)
+            foreach (AddonPackage addon in Addons)
                 if (addon.Location.ToLower() == pLocation)
                     return addon;
 
@@ -289,7 +393,7 @@ namespace MSAddonLib.Persistence.AddonDB
             if (!string.IsNullOrEmpty(pPublisher))
             {
                 string qualifiedName = $"{pPublisher}.{pName}";
-                foreach(AddonPackage addon in Addons)
+                foreach (AddonPackage addon in Addons)
                     if (addon.QualifiedName.ToLower() == qualifiedName)
                         return addon;
 
@@ -310,7 +414,7 @@ namespace MSAddonLib.Persistence.AddonDB
             if (string.IsNullOrEmpty(pLocation = pLocation?.Trim().ToLower()) || (Addons == null))
                 return -1;
 
-            for(int index = 0; index < Addons.Count; ++index)
+            for (int index = 0; index < Addons.Count; ++index)
                 if (Addons[index].Location.ToLower() == pLocation)
                     return index;
             return -1;
@@ -350,11 +454,11 @@ namespace MSAddonLib.Persistence.AddonDB
         {
             List<AddonPackage> subSet = pAddonSearchCriteria == null ? Addons : SelectPackages(pAddonSearchCriteria);
 
-            if(pAssetSearchCriteria == null)
-                pAssetSearchCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null);
+            if (pAssetSearchCriteria == null)
+                pAssetSearchCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null, null);
 
             // if (pAssetSearchCriteria != null)
-                return SearchAsset(subSet, pAssetSearchCriteria);
+            return SearchAsset(subSet, pAssetSearchCriteria);
             /*
             return (pAddonSearchCriteria == null)
                 ? null
@@ -396,19 +500,46 @@ namespace MSAddonLib.Persistence.AddonDB
                 return null;
 
             if (pCriteria == null)
-                pCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null);
+                pCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null, null);
 
             List<AssetSearchResultItem> items = new List<AssetSearchResultItem>();
 
             foreach (AddonPackage package in pPackages)
             {
                 List<AssetSearchResultItem> found = pCriteria.SearchAsset(package);
-                if(found != null)
+                if (found != null)
                     items.AddRange(found);
             }
 
             return items.Count > 0 ? items : null;
         }
 
+        public object Clone()
+        {
+            MoviestormPaths clonedMoviestormPaths = (MoviestormPaths)MoviestormPaths.Clone();
+            List<string> clonedAddonSources = null;
+            if (AddonSources != null)
+            {
+                clonedAddonSources = new List<string>();
+                foreach (string source in AddonSources)
+                    clonedAddonSources.Add(source);
+            }
+
+            AddonPackageSet newAddonPackageSet = new AddonPackageSet(clonedMoviestormPaths, clonedAddonSources, Description);
+
+            List<AddonPackage> clonedAddons = null;
+            if (Addons != null)
+            {
+                clonedAddons = new List<AddonPackage>();
+                foreach (AddonPackage item in Addons)
+                    clonedAddons.Add(item);
+            }
+
+            newAddonPackageSet.CatalogueVersion = CatalogueVersion;
+            newAddonPackageSet.Addons = clonedAddons;
+            newAddonPackageSet.LastUpdate = LastUpdate;
+
+            return newAddonPackageSet;
+        }
     }
 }

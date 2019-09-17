@@ -202,6 +202,7 @@ namespace MSAddonLib.Domain.Addon
         /// </summary>
         public bool HasVerbs { get; set; }
 
+        public AddonAssetSummary AssetSummary { get; set; }
 
         /// <summary>
         /// Summary info about body models
@@ -447,7 +448,7 @@ namespace MSAddonLib.Domain.Addon
                     _issuesStringBuilder.AppendLine($"VerbsSummary: {errorText}");
                 }
             }
-
+            
             Sounds = GetSounds(contentsSummary.SoundFiles);
 
             Filters = GetFilters(contentsSummary.FilterFiles);
@@ -458,8 +459,71 @@ namespace MSAddonLib.Domain.Addon
 
             SkyTextures = GetSkies(contentsSummary.SkyFiles);
 
+            UpdateAssetSummary();
+
             return true;
         }
+
+        public void UpdateAssetSummary()
+        {
+            AssetSummary = new AddonAssetSummary();
+
+            if ((BodyModelsSummary?.Puppets?.Puppets?.Count ?? 0) > 0)
+            {
+                foreach (BodyModelSumPuppet puppet in BodyModelsSummary.Puppets.Puppets)
+                {
+                    AssetSummary.Bodyparts += puppet.BodyParts?.Count ?? 0;
+                    AssetSummary.Decals += puppet.Decals?.Count ?? 0;
+                }
+            }
+
+            AssetSummary.Animations = UpdateAnimationsCount();
+
+            AssetSummary.Props += PropModelsSummary?.Props?.Props?.Count ?? 0;
+
+            AssetSummary.Verbs +=
+                (VerbsSummary?.Verbs?.Gaits?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.Gestures?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.PuppetSoloVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.PuppetMutualVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.PropSoloVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.HeldPropsVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.InteractivePropsVerbs?.Count ?? 0);
+
+            AssetSummary.Sounds = Sounds?.Count ?? 0;
+            AssetSummary.Filters = Filters?.Count ?? 0;
+            AssetSummary.SpecialEffects = SpecialEffects?.Count ?? 0;
+            AssetSummary.Materials = Materials?.Count ?? 0;
+            AssetSummary.SkyTextures = SkyTextures?.Count ?? 0;
+
+            AssetSummary.Stocks = StockAssets?.Count ?? 0;
+            AssetSummary.StartMovies = DemoMovies?.Count ?? 0;
+        }
+
+        private int UpdateAnimationsCount()
+        {
+            if (AssetManifest == null)
+                return 0;
+
+            int count = 0;
+            if ((AssetManifest.BodyModels != null) && (AssetManifest.BodyModels.Count > 0))
+            {
+                foreach (BodyModelItem puppet in AssetManifest.BodyModels)
+                {
+                    count += puppet.Animations?.Count ?? 0;
+                }
+            }
+            if ((AssetManifest.PropModels != null) && (AssetManifest.PropModels.Count > 0))
+            {
+                foreach (PropModelItem prop in AssetManifest.PropModels)
+                {
+                    count += prop.Animations?.Count ?? 0;
+                }
+            }
+
+            return count;
+        }
+
 
         private DateTime? GetLastCompiled()
         {
@@ -1333,6 +1397,34 @@ namespace MSAddonLib.Domain.Addon
         Unknown,
         PackageFile,
         InstalledFolder
+    }
+
+
+    public sealed class AddonAssetSummary
+    {
+        public int Bodyparts { get; set; }
+
+        public int Decals { get; set; }
+
+        public int Props { get; set; }
+
+        public int Animations { get; set; }
+
+        public int Verbs { get; set; }
+
+        public int Sounds { get; set; }
+
+        public int Filters { get; set; }
+
+        public int SpecialEffects { get; set; }
+
+        public int Materials { get; set; }
+
+        public int SkyTextures { get; set; }
+
+        public int Stocks { get; set; }
+
+        public int StartMovies { get; set; }
     }
 
 

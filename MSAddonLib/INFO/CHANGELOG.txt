@@ -1,6 +1,27 @@
 
 MSAddonLib - Version History
 --------------------------------
+
+* v1.5.4 (20190917):
+	AddonPackage:
+		- Asset statistics
+	AddonPackageSet: 
+		- Current Version: 1.4
+		- new const: DefaultAddonPackageSet
+		- new property: Description
+		- implements ICloneable
+		- load/save: guarantees that the file name passed as argument is properly formed
+		- while loading, automatically checks for the existence of the Asset statistics for every addon and, if needed, generates them and save changes to the file
+		- Defined new constants: 
+			DefaultAddonPackageSetName
+			AddonPackageSetFileExtension
+	AssetSearchCriteria: new property: AssetSubTypes
+	New Assets listed and searchable:
+		Stocks
+		Start Movies
+		Animations
+	ProcessingFlags: new FolderTopOnlySearch (see DiskEntityFolder)
+
 * v1.5.0 (20190907):
 	DiskEntityFolder: new property ArchivedPath, for specifying the full path of an archived entity
 	AddonPackageSource: new property ArchivedPath

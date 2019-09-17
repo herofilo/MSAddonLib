@@ -36,15 +36,15 @@ namespace MSAddonLib.Persistence.AddonDB
         {
             Name = pName?.Trim().ToLower();
             if (!string.IsNullOrEmpty(Name))
-                _nameRegex = new Regex($"{Name}*", RegexOptions.IgnoreCase);
+                _nameRegex = new Regex($"{Name}", RegexOptions.IgnoreCase);
             Publisher = pPublisher?.Trim().ToLower();
             if (!string.IsNullOrEmpty(Publisher))
-                _publisherRegex = new Regex($"{Publisher}*", RegexOptions.IgnoreCase);
+                _publisherRegex = new Regex($"{Publisher}", RegexOptions.IgnoreCase);
             Installed = pInstalled;
             ContentPack = pContentPack;
             Location = pLocation?.Trim().ToLower();
             if (!string.IsNullOrEmpty(Location))
-                _locationRegex = new Regex($"{Location}*", RegexOptions.IgnoreCase);
+                _locationRegex = new Regex($"{Location}", RegexOptions.IgnoreCase);
 
             if (ContentPacksPath == null)
             {

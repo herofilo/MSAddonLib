@@ -46,7 +46,6 @@ namespace MSAddonLib.Domain
             DirectoryInfo directoryInfo = new DirectoryInfo(EntityPath);
 
             FileInfo[] addonInfoList = directoryInfo.GetFiles("*.addon", SearchOption.TopDirectoryOnly);
-            
 
             foreach (FileInfo item in addonInfoList)
             {
@@ -74,14 +73,18 @@ namespace MSAddonLib.Domain
             }
 
 
-            DirectoryInfo[] subdirectories = directoryInfo.GetDirectories();
-            if (subdirectories.Length > 0)
+            if (!pProcessingFlags.HasFlag(ProcessingFlags.FolderTopOnlySearch))
             {
-                foreach (DirectoryInfo subdirectoryInfo in subdirectories)
+                DirectoryInfo[] subdirectories = directoryInfo.GetDirectories();
+                if (subdirectories.Length > 0)
                 {
-                    new DiskEntityFolder(subdirectoryInfo.FullName, null, ReportWriter).CheckEntity(pProcessingFlags);
+                    foreach (DirectoryInfo subdirectoryInfo in subdirectories)
+                    {
+                        new DiskEntityFolder(subdirectoryInfo.FullName, null, ReportWriter).CheckEntity(pProcessingFlags);
+                    }
                 }
             }
+
             return true;
         }
 

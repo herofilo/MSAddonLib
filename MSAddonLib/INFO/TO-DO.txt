@@ -2,3 +2,6 @@
 MSAddonLib - TO-DO
 -----------------------
 
+AddonPackage: 
+	- Más coherencia en la captura de errores -> Issues
+	- ToString(): si HasIssues: print!
