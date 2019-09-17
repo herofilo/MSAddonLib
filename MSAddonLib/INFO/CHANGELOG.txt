@@ -5,6 +5,8 @@ MSAddonLib - Version History
 * v1.5.4 (20190917):
 	AddonPackage:
 		- Asset statistics
+		- More coherent and complete recollection of issues
+		- ToString(): list issues, if any
 	AddonPackageSet: 
 		- Current Version: 1.4
 		- new const: DefaultAddonPackageSet

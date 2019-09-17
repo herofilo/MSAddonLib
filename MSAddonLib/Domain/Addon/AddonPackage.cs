@@ -255,13 +255,12 @@ namespace MSAddonLib.Domain.Addon
         /// The addon has some issue
         /// </summary>
         [XmlIgnore]
-        public bool HasIssues => !string.IsNullOrEmpty(_issuesStringBuilder.ToString());
+        public bool HasIssues => !string.IsNullOrEmpty(Issues);
 
         /// <summary>
         /// Text of the issues
         /// </summary>
-        [XmlIgnore]
-        public string Issues { get { return _issuesStringBuilder.ToString(); } }
+        public string Issues { get; set; }
 
 
         private readonly StringBuilder _issuesStringBuilder = new StringBuilder();
@@ -412,7 +411,14 @@ namespace MSAddonLib.Domain.Addon
 
             HasVerbs = contentsSummary.HasVerbs;
 
-            RetrieveAddonSignatureInfo();
+            try
+            {
+                RetrieveAddonSignatureInfo();
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine(exception.Message);
+            }
 
             try
             {
@@ -448,7 +454,7 @@ namespace MSAddonLib.Domain.Addon
                     _issuesStringBuilder.AppendLine($"VerbsSummary: {errorText}");
                 }
             }
-            
+
             Sounds = GetSounds(contentsSummary.SoundFiles);
 
             Filters = GetFilters(contentsSummary.FilterFiles);
@@ -458,6 +464,8 @@ namespace MSAddonLib.Domain.Addon
             Materials = GetMaterials(Source, contentsSummary.MaterialsFiles);
 
             SkyTextures = GetSkies(contentsSummary.SkyFiles);
+
+            Issues = _issuesStringBuilder.ToString()?.Trim();
 
             UpdateAssetSummary();
 
@@ -538,9 +546,10 @@ namespace MSAddonLib.Domain.Addon
                 FileInfo fileInfo = new FileInfo(Path.Combine(Source.SourcePath, SignatureFilename));
                 return fileInfo?.LastWriteTime;
             }
-            catch
+            catch (Exception exception)
             {
-
+                _issuesStringBuilder.AppendLine(
+                    $"ERROR while getting datetime of last compilation: {exception.Message}");
             }
 
             return null;
@@ -907,7 +916,7 @@ namespace MSAddonLib.Domain.Addon
                 case AddonPackageSourceType.Archiver:
                     addonSignatureFilename = GetArchivedFileFullName(SignatureFilename);
                     addonFileContents = Source.Archiver.ExtractArchivedFileToByte(addonSignatureFilename);
-                    if(addonFileContents == null)
+                    if (addonFileContents == null)
                         errorText = Source.Archiver.LastErrorText;
                     break;
                 case AddonPackageSourceType.Folder:
@@ -961,7 +970,7 @@ namespace MSAddonLib.Domain.Addon
 
             string manifestContents = assetDataArchiver.ExtractArchivedFileToString(ManifestFilename, true);
 
-            if(deleteTempAssetDataFile)
+            if (deleteTempAssetDataFile)
                 File.Delete(assetDataFile);
             if (string.IsNullOrEmpty(manifestContents))
             {
@@ -1024,6 +1033,11 @@ namespace MSAddonLib.Domain.Addon
             AddonVersionInfo addonVersionInfo = AddonVersionInfo.LoadFromString(versionFileContents, out errorText);
             if (addonVersionInfo != null)
                 Revision = addonVersionInfo.Revision;
+            else
+            {
+                if (errorText != null)
+                    _issuesStringBuilder.AppendLine(errorText);
+            }
         }
 
         // --------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1139,11 +1153,17 @@ namespace MSAddonLib.Domain.Addon
                 return null;
 
             List<string> skies = new List<string>();
-            foreach (string item in pSkyFiles)
+            try
             {
-                skies.Add(item.Remove(0, "Data\\Sky\\".Length));
+                foreach (string item in pSkyFiles)
+                {
+                    skies.Add(item.Remove(0, "Data\\Sky\\".Length));
+                }
             }
-
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Sky Textures: {exception.Message}");
+            }
             return skies;
         }
 
@@ -1154,9 +1174,16 @@ namespace MSAddonLib.Domain.Addon
                 return null;
 
             List<string> sounds = new List<string>();
-            foreach (string item in pSoundFiles)
+            try
             {
-                sounds.Add(item.Remove(0, "Data\\Sound\\".Length).Replace("\\", "/"));
+                foreach (string item in pSoundFiles)
+                {
+                    sounds.Add(item.Remove(0, "Data\\Sound\\".Length).Replace("\\", "/"));
+                }
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Sounds: {exception.Message}");
             }
 
             return sounds;
@@ -1168,9 +1195,16 @@ namespace MSAddonLib.Domain.Addon
                 return null;
 
             List<string> filters = new List<string>();
-            foreach (string item in pFilterFiles)
+            try
             {
-                filters.Add(item.Remove(0, "Data/CuttingRoom/Filters/".Length).Replace("\\", "/"));
+                foreach (string item in pFilterFiles)
+                {
+                    filters.Add(item.Remove(0, "Data/CuttingRoom/Filters/".Length).Replace("\\", "/"));
+                }
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Filters: {exception.Message}");
             }
 
             return filters;
@@ -1184,11 +1218,17 @@ namespace MSAddonLib.Domain.Addon
                 return null;
 
             List<string> specialEffects = new List<string>();
-            foreach (string item in pSpecialEffects)
+            try
             {
-                specialEffects.Add(item.Replace("Data\\", "").Replace("\\", "/").Replace(".mps", ""));
+                foreach (string item in pSpecialEffects)
+                {
+                    specialEffects.Add(item.Replace("Data\\", "").Replace("\\", "/").Replace(".mps", ""));
+                }
             }
-
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting SFX: {exception.Message}");
+            }
             return specialEffects;
         }
 
@@ -1197,22 +1237,29 @@ namespace MSAddonLib.Domain.Addon
 
         private double? GetMeshDataSize()
         {
-            switch (Source.SourceType)
+            try
             {
-                case AddonPackageSourceType.Archiver:
-                    foreach (ArchiveFileInfo file in _addonFileList)
-                    {
-                        if (file.FileName.ToLower() == MeshDataFilename.ToLower())
+                switch (Source.SourceType)
+                {
+                    case AddonPackageSourceType.Archiver:
+                        foreach (ArchiveFileInfo file in _addonFileList)
                         {
-                            return file.Size / BytesPerMegabyte;
+                            if (file.FileName.ToLower() == MeshDataFilename.ToLower())
+                            {
+                                return file.Size / BytesPerMegabyte;
+                            }
                         }
-                    }
-                    break;
-                case AddonPackageSourceType.Folder:
-                    string meshDataFile = Path.Combine(Source.SourcePath, MeshDataFilename);
-                    if (File.Exists(meshDataFile))
-                        return new FileInfo(meshDataFile).Length / BytesPerMegabyte;
-                    break;
+                        break;
+                    case AddonPackageSourceType.Folder:
+                        string meshDataFile = Path.Combine(Source.SourcePath, MeshDataFilename);
+                        if (File.Exists(meshDataFile))
+                            return new FileInfo(meshDataFile).Length / BytesPerMegabyte;
+                        break;
+                }
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Mesh Data Size: {exception.Message}");
             }
 
             return null;
@@ -1230,10 +1277,15 @@ namespace MSAddonLib.Domain.Addon
 
             StringBuilder summary = new StringBuilder();
             summary.AppendLine(string.Format("    Name: {0}", Name));
+            if (HasIssues)
+            {
+                summary.AppendLine("   !Has Issues - refer to the end of the report...");
+            }
+
             // summary.AppendLine(string.Format("FriendlyName: {0}", _friendlyName));
             summary.AppendLine(string.Format("    Publisher: {0}", Publisher));
             summary.AppendLine(string.Format("    Free: {0}", Free));
-            if(LastCompiled.HasValue)
+            if (LastCompiled.HasValue)
                 summary.AppendLine(string.Format($"    Last compiled: {LastCompiled.Value:u}"));
             if (!string.IsNullOrEmpty(Description))
             {
@@ -1277,7 +1329,7 @@ namespace MSAddonLib.Domain.Addon
                     }
                 }
             }
-            if(!string.IsNullOrEmpty(Revision))
+            if (!string.IsNullOrEmpty(Revision))
                 summary.AppendLine(string.Format("    Revision: {0}", Revision));
             // summary.AppendLine(string.Format("Path: {0}", _addonPath));
             if (MeshDataSizeMbytes.HasValue && (MeshDataSizeMbytes.Value > 0))
@@ -1369,6 +1421,13 @@ namespace MSAddonLib.Domain.Addon
             AppendMiscList(summary, Materials, "Materials");
 
             AppendMiscList(summary, SkyTextures, "Sky Textures");
+
+            if (HasIssues)
+            {
+                summary.AppendLine("    Issues:");
+                foreach(string line in Issues.Split("\n".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
+                    summary.AppendLine($"        {line}");
+            }
 
             return (ReportText = summary.ToString());
         }
