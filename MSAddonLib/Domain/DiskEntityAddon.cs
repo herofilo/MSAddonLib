@@ -102,8 +102,13 @@ namespace MSAddonLib.Domain
 
             if (appendToPackageSet && (AddonPackageSet != null) && (package != null) && (!package.HasIssues))
             {
-                if (AddonPackageSet.Append(package, pProcessingFlags.HasFlag(ProcessingFlags.AppendToAddonPackageSetForceRefresh)))
+                if (AddonPackageSet.Append(package,
+                    pProcessingFlags.HasFlag(ProcessingFlags.AppendToAddonPackageSetForceRefresh)))
+                {
                     pReport += " >>> Inserted/updated into Database";
+                    if (package.HasIssues)
+                        pReport += " [Has Issues!]";
+                }
             }
 
 

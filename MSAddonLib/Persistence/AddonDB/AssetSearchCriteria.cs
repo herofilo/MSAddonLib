@@ -30,32 +30,48 @@ namespace MSAddonLib.Persistence.AddonDB
 
         public List<string> Tags { get; private set; }
 
+        private Regex _tagsRegex = null;
 
-        public AssetSearchCriteria(string pName, AddonAssetType pAssetType, string pAssetSubTypes, string pTags)
+        public List<string> ExtraInfo { get; private set; }
+
+        private Regex _assetExtraInfoRegex = null;
+
+        private const string ExtraInfoNull = "{N*0@M_A?T*C=H}";
+
+
+        // ----------------------------------------------------------------------------------------------------
+
+
+        public AssetSearchCriteria(string pName, AddonAssetType pAssetType, string pAssetSubTypes, string pTags, string pExtraInfo)
         {
             Name = pName?.Trim().ToLower();
             if (!string.IsNullOrEmpty(Name))
                 _nameRegex = new Regex($"{Name}", RegexOptions.IgnoreCase);
-            AssetType = pAssetType;
-            AssetSubTypes = pAssetSubTypes?.Trim().ToLower().Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList();
 
-            _assetSubTypesRegex = CreateAssetSubTypesRegex(AssetSubTypes);
+            AssetType = pAssetType;
+
+            AssetSubTypes = pAssetSubTypes?.Trim().ToLower().Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList();
+            _assetSubTypesRegex = CreateMultiValuedRegex(AssetSubTypes);
 
             Tags = pTags?.Trim().ToLower().Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList();
+            _tagsRegex = CreateMultiValuedRegex(Tags);
+
+            ExtraInfo = pExtraInfo?.Trim().ToLower().Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList();
+            _assetExtraInfoRegex = CreateMultiValuedRegex(ExtraInfo);
         }
 
-        private Regex CreateAssetSubTypesRegex(List<string> assetSubTypes)
+        private Regex CreateMultiValuedRegex(List<string> pValues)
         {
-            if ((AssetSubTypes == null) || (AssetSubTypes.Count == 0))
+            if ((pValues == null) || (pValues.Count == 0))
                 return null;
 
             string regexString;
-            if (AssetSubTypes.Count == 1)
-                regexString = AssetSubTypes[0];
+            if (pValues.Count == 1)
+                regexString = pValues[0];
             else
             {
                 StringBuilder regexBuilder = new StringBuilder();
-                foreach (string item in AssetSubTypes)
+                foreach (string item in pValues)
                     regexBuilder.Append($"{item}|");
                 regexString = regexBuilder.ToString();
                 regexString = regexString.Substring(0, regexString.Length - 1);
@@ -155,6 +171,8 @@ namespace MSAddonLib.Persistence.AddonDB
 
         private void SearchCommon2(List<string> pAssets, AddonAssetType pAssetType, AssetSearchResultItem pBaseResultItem, List<AssetSearchResultItem> pFound)
         {
+            if ((_tagsRegex != null) || (_assetExtraInfoRegex != null))
+                return;
 
             foreach (string asset in pAssets)
             {
@@ -177,6 +195,9 @@ namespace MSAddonLib.Persistence.AddonDB
 
         private void SearchCommon(List<string> pAssets, AddonAssetType pAssetType, AssetSearchResultItem pBaseResultItem, List<AssetSearchResultItem> pFound)
         {
+            if ((_tagsRegex != null) || (_assetExtraInfoRegex != null))
+                return;
+
             foreach (string asset in pAssets)
             {
 
@@ -241,14 +262,19 @@ namespace MSAddonLib.Persistence.AddonDB
                         if (!_assetSubTypesRegex.IsMatch(part.BodyPartType))
                             continue;
 
+                    string extraInfo = $"{part.Covers}";
+                    if (part.Morphable)
+                        extraInfo += " [Morphable]";
+                    if ((_assetExtraInfoRegex != null) && !_assetExtraInfoRegex.IsMatch(extraInfo ?? ExtraInfoNull))
+                         continue;
+
                     AssetSearchResultItem item = (AssetSearchResultItem)pBaseResultItem.Clone();
                     item.AssetType = AddonAssetType.BodyPart;
                     item.AssetSubtype = part.BodyPartType;
                     item.Name = $"{puppetName} : {part.BodyPartName}";
                     item.Tags = StringListToString(part.Tags);
-                    item.ExtraInfo = $"{part.Covers}";
-                    if (part.Morphable)
-                        item.ExtraInfo += " [Morphable]";
+                    item.ExtraInfo = extraInfo;
+
                     pFound.Add(item);
                 }
             }
@@ -256,6 +282,9 @@ namespace MSAddonLib.Persistence.AddonDB
 
         private void SearchDecals(List<BodyModelSumPuppet> pPuppets, AssetSearchResultItem pBaseResultItem, List<AssetSearchResultItem> pFound)
         {
+            if ((_tagsRegex != null) || (_assetExtraInfoRegex != null))
+                return;
+
             foreach (BodyModelSumPuppet puppet in pPuppets)
             {
                 if (puppet.Decals == null)
@@ -317,38 +346,58 @@ namespace MSAddonLib.Persistence.AddonDB
                     if (!_assetSubTypesRegex.IsMatch(prop.PropType))
                         continue;
 
+                string extraInfo = prop.AttributesString;
+                if ((prop.Variants?.Count ?? 0) > 1)
+                    extraInfo += PropVariantsInfo(prop.Variants);
+                if (prop.MultiPart)
+                    extraInfo += " [Multipart]";
+                if ((_assetExtraInfoRegex != null) && !_assetExtraInfoRegex.IsMatch(extraInfo ?? ExtraInfoNull))
+                    continue;
+
+
                 AssetSearchResultItem item = (AssetSearchResultItem)pBaseResultItem.Clone();
                 item.AssetType = AddonAssetType.Prop;
                 item.AssetSubtype = prop.PropType;
                 item.Name = prop.PropName;
                 item.Tags = StringListToString(prop.Tags);
-                item.ExtraInfo = prop.AttributesString;
-                if ((prop.Variants?.Count ?? 0) > 1)
-                    item.ExtraInfo += $"  ({prop.Variants.Count} Variants)";
-                if (prop.MultiPart)
-                    item.ExtraInfo += " [Multipart]";
+                item.ExtraInfo = extraInfo;
+
                 pFound.Add(item);
             }
         }
 
 
+        private string PropVariantsInfo(List<string> pVariants)
+        {
+            if ((pVariants == null) || (pVariants.Count < 2))
+                return "";
+
+            StringBuilder variantBuilder = new StringBuilder();
+            foreach (string variant in pVariants)
+                variantBuilder.Append($"'{variant}',");
+
+            string variantInfo = variantBuilder.ToString();
+            variantInfo = variantInfo.Substring(0, variantInfo.Length - 1);
+
+            return $"  ({pVariants.Count} Variants: {variantInfo})";
+        }
+
+
         private bool TagFilterOk(List<string> pAssetTags)
         {
-            if ((Tags == null) || (Tags.Count == 0))
+            if (_tagsRegex == null)
                 return true;
 
             if ((pAssetTags == null) || (pAssetTags.Count == 0))
                 return false;
 
             bool gotTag = false;
-            foreach (string tagSearched in Tags)
-            {
-                if (pAssetTags.Contains(tagSearched))
+            foreach(string tag in pAssetTags)
+                if (_tagsRegex.IsMatch(tag))
                 {
                     gotTag = true;
                     break;
                 }
-            }
 
             return gotTag;
         }
@@ -357,6 +406,9 @@ namespace MSAddonLib.Persistence.AddonDB
 
         private void SearchVerbs(VerbCollection pVerbs, AssetSearchResultItem pBaseResultItem, List<AssetSearchResultItem> pFound)
         {
+            if (_tagsRegex != null)
+                return;
+
             if (pVerbs.Flags.HasFlag(VerbCollectionFlags.Gaits))
                 SearchVerbsKind(pVerbs.Gaits, VerbCollectionFlags.Gaits, pBaseResultItem, pFound);
             if (pVerbs.Flags.HasFlag(VerbCollectionFlags.Gestures))
@@ -386,16 +438,16 @@ namespace MSAddonLib.Persistence.AddonDB
                     if (!_assetSubTypesRegex.IsMatch(verb.VerbType))
                         continue;
 
+                string extraInfo = GetVerbExtraInfo(verb, pVerbType);
+                if ((_assetExtraInfoRegex != null) && !_assetExtraInfoRegex.IsMatch(extraInfo ?? ExtraInfoNull))
+                    continue;
+
                 AssetSearchResultItem item = (AssetSearchResultItem)pBaseResultItem.Clone();
                 item.AssetType = AddonAssetType.Verb;
                 item.AssetSubtype = verb.VerbType;
                 item.Name = verb.VerbName;
-                item.ExtraInfo = GetVerbExtraInfo(verb, pVerbType);
-                /*
-                item.ExtraInfo = $"[{verb.ModelA}]";
-                if(verb.ModelB != null)
-                    item.ExtraInfo += $"[{verb.ModelB}]";
-                    */
+                item.ExtraInfo = extraInfo;
+
                 pFound.Add(item);
             }
         }
@@ -444,6 +496,9 @@ namespace MSAddonLib.Persistence.AddonDB
 
         private void SearchAnimations(AssetManifest pManifest, AssetSearchResultItem pBaseResultItem, List<AssetSearchResultItem> pFound)
         {
+            if (_tagsRegex != null)
+                return;
+
             const string PuppetAnimationToken = "PuppetAnimation";
             if ((_assetSubTypesRegex == null) || _assetSubTypesRegex.IsMatch(PuppetAnimationToken))
             {
@@ -492,11 +547,15 @@ namespace MSAddonLib.Persistence.AddonDB
                 if (animationLower.StartsWith(prefix))
                     animationName = animationName.Remove(0, prefix.Length);
 
+                string extraInfo = $"[{pOwnerName}]";
+                if ((_assetExtraInfoRegex != null) && !_assetExtraInfoRegex.IsMatch(extraInfo ?? ExtraInfoNull))
+                    continue;
+
                 AssetSearchResultItem item = (AssetSearchResultItem)pBaseResultItem.Clone();
                 item.AssetType = AddonAssetType.Animation;
                 item.AssetSubtype = pAssetSubType;
                 item.Name = animationName;
-                item.ExtraInfo = $"[{pOwnerName}]";
+                item.ExtraInfo = extraInfo;
 
                 pFound.Add(item);
             }

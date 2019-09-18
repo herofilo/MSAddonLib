@@ -455,7 +455,7 @@ namespace MSAddonLib.Persistence.AddonDB
             List<AddonPackage> subSet = pAddonSearchCriteria == null ? Addons : SelectPackages(pAddonSearchCriteria);
 
             if (pAssetSearchCriteria == null)
-                pAssetSearchCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null, null);
+                pAssetSearchCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null, null, null);
 
             // if (pAssetSearchCriteria != null)
             return SearchAsset(subSet, pAssetSearchCriteria);
@@ -500,7 +500,7 @@ namespace MSAddonLib.Persistence.AddonDB
                 return null;
 
             if (pCriteria == null)
-                pCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null, null);
+                pCriteria = new AssetSearchCriteria(null, AddonAssetType.Any, null, null, null);
 
             List<AssetSearchResultItem> items = new List<AssetSearchResultItem>();
 

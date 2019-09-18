@@ -78,6 +78,16 @@ namespace MSAddonLib.Util
         }
 
         /// <summary>
+        /// Gets the executable full path
+        /// </summary>
+        /// <returns>Path to the executable file</returns>
+        public static string GetExecutableFullPath()
+        {
+            return System.Reflection.Assembly.GetEntryAssembly().Location;
+        }
+
+
+        /// <summary>
         /// Gets the temporary folder
         /// </summary>
         /// <returns>Path to the temporary folder</returns>
