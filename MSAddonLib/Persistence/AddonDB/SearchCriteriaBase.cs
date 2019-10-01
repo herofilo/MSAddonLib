@@ -12,11 +12,14 @@ namespace MSAddonLib.Persistence.AddonDB
 
         protected Regex CreateMultiValuedRegex(string pStrings, bool pCleaned = false)
         {
+            /*
             if (string.IsNullOrEmpty(pStrings = pStrings?.Trim().ToLower()))
                 return null;
 
             string[] values = pStrings.Trim().ToLower()
                 .Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                */
+            string[] values = GetRawValues(pStrings);
 
             if ((values == null) || (values.Length == 0))
                 return null;
@@ -52,6 +55,21 @@ namespace MSAddonLib.Persistence.AddonDB
         }
 
 
+        private string[] GetRawValues(string pStrings)
+        {
+            if (string.IsNullOrEmpty(pStrings = pStrings?.Trim().ToLower()))
+                return null;
+
+            string separator = " ";
+            if (pStrings.IndexOf(",", StringComparison.InvariantCulture) >= 0)
+                separator = ",";
+            // else if (pStrings.IndexOf(";", StringComparison.InvariantCulture) >= 0)
+            //    separator = ";";
+
+            return pStrings.Split(separator.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+        }
+
+
         private string CleanRegexStrings(string pStrings)
         {
             while (!string.IsNullOrEmpty(pStrings))
@@ -64,6 +82,12 @@ namespace MSAddonLib.Persistence.AddonDB
 
             return pStrings;
         }
+
+
+
+
+        // -------------------------------------------------------------------------------------------------------
+
 
 
     }

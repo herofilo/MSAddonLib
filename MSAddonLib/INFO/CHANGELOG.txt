@@ -1,6 +1,10 @@
 
 MSAddonLib - Version History
 --------------------------------
+
+* v1.5.9 (20191001):
+	SearchCriteriaBase.CreateMultiValuedRegex(): splits multi-search strings preferably by commas or spaces, in this order
+
 * v1.5.8 (20190930):
 	AddonPackageSet:
 		- Removed duplicated code in FindByLocation() and FindByName()
