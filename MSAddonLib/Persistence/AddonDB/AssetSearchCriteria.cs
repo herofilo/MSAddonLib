@@ -4,11 +4,12 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms.VisualStyles;
 using MSAddonLib.Domain.Addon;
 
 namespace MSAddonLib.Persistence.AddonDB
 {
-    public sealed class AssetSearchCriteria
+    public sealed class AssetSearchCriteria : SearchCriteriaBase
     {
         public static string ContentPacksPath
         {
@@ -24,15 +25,15 @@ namespace MSAddonLib.Persistence.AddonDB
 
         public AddonAssetType AssetType { get; private set; }
 
-        public List<string> AssetSubTypes { get; private set; }
+        public string AssetSubTypes { get; private set; }
 
         private Regex _assetSubTypesRegex = null;
 
-        public List<string> Tags { get; private set; }
+        public string Tags { get; private set; }
 
         private Regex _tagsRegex = null;
 
-        public List<string> ExtraInfo { get; private set; }
+        public string ExtraInfo { get; private set; }
 
         private Regex _assetExtraInfoRegex = null;
 
@@ -44,42 +45,21 @@ namespace MSAddonLib.Persistence.AddonDB
 
         public AssetSearchCriteria(string pName, AddonAssetType pAssetType, string pAssetSubTypes, string pTags, string pExtraInfo)
         {
-            Name = pName?.Trim().ToLower();
-            if (!string.IsNullOrEmpty(Name))
-                _nameRegex = new Regex($"{Name}", RegexOptions.IgnoreCase);
+            Name = pName;
+            _nameRegex = CreateMultiValuedRegex(Name);
 
             AssetType = pAssetType;
 
-            AssetSubTypes = pAssetSubTypes?.Trim().ToLower().Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList();
+            AssetSubTypes = pAssetSubTypes;
             _assetSubTypesRegex = CreateMultiValuedRegex(AssetSubTypes);
 
-            Tags = pTags?.Trim().ToLower().Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList();
+            Tags = pTags;
             _tagsRegex = CreateMultiValuedRegex(Tags);
 
-            ExtraInfo = pExtraInfo?.Trim().ToLower().Split(" ,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).ToList();
+            ExtraInfo = pExtraInfo;
             _assetExtraInfoRegex = CreateMultiValuedRegex(ExtraInfo);
         }
-
-        private Regex CreateMultiValuedRegex(List<string> pValues)
-        {
-            if ((pValues == null) || (pValues.Count == 0))
-                return null;
-
-            string regexString;
-            if (pValues.Count == 1)
-                regexString = pValues[0];
-            else
-            {
-                StringBuilder regexBuilder = new StringBuilder();
-                foreach (string item in pValues)
-                    regexBuilder.Append($"{item}|");
-                regexString = regexBuilder.ToString();
-                regexString = regexString.Substring(0, regexString.Length - 1);
-                regexString = $"({regexString})";
-            }
-
-            return new Regex(regexString, RegexOptions.IgnoreCase);
-        }
+        
 
 
         public List<AssetSearchResultItem> SearchAsset(AddonPackage pPackage)

@@ -372,6 +372,9 @@ namespace MSAddonLib.Persistence.AddonDB
 
         public AddonPackage FindByLocation(string pLocation)
         {
+            int index = GetIndexByLocation(pLocation);
+            return (index < 0) ? null : Addons[index];
+            /*
             if (string.IsNullOrEmpty(pLocation = pLocation?.Trim().ToLower()) || (Addons == null))
                 return null;
 
@@ -380,11 +383,27 @@ namespace MSAddonLib.Persistence.AddonDB
                     return addon;
 
             return null;
+            */
+        }
+
+
+        public int GetIndexByLocation(string pLocation)
+        {
+            if (string.IsNullOrEmpty(pLocation = pLocation?.Trim().ToLower()) || (Addons == null))
+                return -1;
+
+            for (int index = 0; index < Addons.Count; ++index)
+                if (Addons[index].Location.ToLower() == pLocation)
+                    return index;
+            return -1;
         }
 
 
         public AddonPackage FindByName(string pName, string pPublisher = null)
         {
+            int index = GetIndexByName(pName, pPublisher);
+            return (index < 0) ? null : Addons[index];
+            /*
             if (string.IsNullOrEmpty(pName = pName?.Trim().ToLower()) || (Addons == null))
                 return null;
 
@@ -405,21 +424,8 @@ namespace MSAddonLib.Persistence.AddonDB
                     return addon;
 
             return null;
+            */
         }
-
-
-
-        public int GetIndexByLocation(string pLocation)
-        {
-            if (string.IsNullOrEmpty(pLocation = pLocation?.Trim().ToLower()) || (Addons == null))
-                return -1;
-
-            for (int index = 0; index < Addons.Count; ++index)
-                if (Addons[index].Location.ToLower() == pLocation)
-                    return index;
-            return -1;
-        }
-
 
 
         public int GetIndexByName(string pName, string pPublisher = null)
@@ -441,6 +447,25 @@ namespace MSAddonLib.Persistence.AddonDB
 
             for (int index = 0; index < Addons.Count; ++index)
                 if (Addons[index].Name.ToLower() == pName)
+                    return index;
+
+            return -1;
+        }
+
+        public AddonPackage FindByQualifiedName(string pQualifiedName)
+        {
+            int index = GetIndexByQualifiedName(pQualifiedName);
+            return (index < 0) ? null : Addons[index];
+        }
+
+
+        public int GetIndexByQualifiedName(string pQualifiedName)
+        {
+            if (string.IsNullOrEmpty(pQualifiedName = pQualifiedName?.Trim().ToLower()) || (Addons == null))
+                return -1;
+
+            for (int index = 0; index < Addons.Count; ++index)
+                if (Addons[index].QualifiedName.ToLower() == pQualifiedName)
                     return index;
 
             return -1;
@@ -513,6 +538,10 @@ namespace MSAddonLib.Persistence.AddonDB
 
             return items.Count > 0 ? items : null;
         }
+
+
+        // ----------------------------------------------------------------------------------------------------------------------------------------------------
+
 
         public object Clone()
         {

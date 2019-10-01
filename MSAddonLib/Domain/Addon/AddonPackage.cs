@@ -1279,7 +1279,7 @@ namespace MSAddonLib.Domain.Addon
             summary.AppendLine(string.Format("    Name: {0}", Name));
             if (HasIssues)
             {
-                summary.AppendLine("   !Has Issues - refer to the end of the report...");
+                summary.AppendLine("   !Has Problems - refer to the end of the report...");
             }
 
             // summary.AppendLine(string.Format("FriendlyName: {0}", _friendlyName));
@@ -1424,7 +1424,7 @@ namespace MSAddonLib.Domain.Addon
 
             if (HasIssues)
             {
-                summary.AppendLine("    Issues:");
+                summary.AppendLine("    !PROBLEMS:");
                 foreach(string line in Issues.Split("\n".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
                     summary.AppendLine($"        {line}");
             }
@@ -1459,7 +1459,7 @@ namespace MSAddonLib.Domain.Addon
     }
 
 
-    public sealed class AddonAssetSummary
+    public class AddonAssetSummary
     {
         public int Bodyparts { get; set; }
 

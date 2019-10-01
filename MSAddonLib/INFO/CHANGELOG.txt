@@ -1,6 +1,19 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.5.8 (20190930):
+	AddonPackageSet:
+		- Removed duplicated code in FindByLocation() and FindByName()
+		- New methods: FindByQualifiedName() and GetIndexByQualifiedName()
+
+* v1.5.7 (20190919):
+	AddonSearchCriteria:
+		Takes multiple substring to search for: Addon Name and Publisher
+	AssetSearchCriteria
+		Takes multiple substring to search for: Asset Name
+	SearchCriteriaBase.CreateMultiValuedRegex() captures exceptions while creating new Regex and modifies source string
+	SearchStatistics: new class
+
 * v1.5.6 (20190918):
 	AssetSearchCriteria:
 		- Fixed problem with filtering by tags and/or ExtraInfo

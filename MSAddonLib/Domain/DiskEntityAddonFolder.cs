@@ -61,14 +61,16 @@ namespace MSAddonLib.Domain
             if (showDetailedContents)
                 pReport = package?.ToString();
 
-            if (appendToPackageSet && (AddonPackageSet != null) && (package != null) && (!package.HasIssues))
+            if (appendToPackageSet && (AddonPackageSet != null) && (package != null))
             {
-                if (AddonPackageSet.Append(package,
-                    pProcessingFlags.HasFlag(ProcessingFlags.AppendToAddonPackageSetForceRefresh)))
+                if(package.HasIssues)
+                    pReport += " >>> NOT inserted/updated into Catalogue (has problems!)";
+                else
                 {
-                    pReport += " >>> Inserted/updated into Database";
-                    if (package.HasIssues)
-                        pReport += " [Has Issues!]";
+                    if (AddonPackageSet.Append(package, pProcessingFlags.HasFlag(ProcessingFlags.AppendToAddonPackageSetForceRefresh)))
+                    {
+                        pReport += " >>> Inserted/updated into Catalogue";
+                    }
                 }
             }
 

@@ -4,7 +4,7 @@ using MSAddonLib.Util.Persistence;
 
 namespace MSAddonLib.Persistence.AddonDB
 {
-    public sealed class AddonSearchCriteria
+    public sealed class AddonSearchCriteria : SearchCriteriaBase
     {
         public static string ContentPacksPath
         {
@@ -32,14 +32,14 @@ namespace MSAddonLib.Persistence.AddonDB
 
 
         public AddonSearchCriteria(string pName, string pPublisher, bool? pInstalled, bool? pContentPack,
-            string pLocation)
+            string pLocation) 
         {
-            Name = pName?.Trim().ToLower();
-            if (!string.IsNullOrEmpty(Name))
-                _nameRegex = new Regex($"{Name}", RegexOptions.IgnoreCase);
-            Publisher = pPublisher?.Trim().ToLower();
-            if (!string.IsNullOrEmpty(Publisher))
-                _publisherRegex = new Regex($"{Publisher}", RegexOptions.IgnoreCase);
+            Name = pName;
+            _nameRegex = CreateMultiValuedRegex(Name);
+
+            Publisher = pPublisher;
+            _publisherRegex = CreateMultiValuedRegex(Publisher);
+
             Installed = pInstalled;
             ContentPack = pContentPack;
             Location = pLocation?.Trim().ToLower();
