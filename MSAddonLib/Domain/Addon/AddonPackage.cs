@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using MSAddonLib.Domain.AssetFiles;
@@ -130,7 +131,7 @@ namespace MSAddonLib.Domain.Addon
         public string Location => Source.ArchivedPath ?? Source.SourcePath;
 
         /// <summary>
-        /// Datetime of last modification of signations file
+        /// Datetime of last modification of signature file
         /// </summary>
         public DateTime? LastCompiled { get; set; }
 
@@ -174,6 +175,11 @@ namespace MSAddonLib.Domain.Addon
         /// The addon has a data folder (required)
         /// </summary>
         public bool HasDataFolder { get; set; }
+
+        /// <summary>
+        /// Summary information about the files in the addon
+        /// </summary>
+        public AddonFileSummaryInfo FileSummaryInfo { get; set; }
 
         /// <summary>
         /// List of demo (starter) movies included
@@ -406,6 +412,8 @@ namespace MSAddonLib.Domain.Addon
                 throw new Exception("No Addon AssetData file (assetData.jar)");
             }
 
+            FileSummaryInfo = contentsSummary.FileSummaryInfo;
+
             LastCompiled = GetLastCompiled();
 
 
@@ -561,6 +569,9 @@ namespace MSAddonLib.Domain.Addon
         {
             CheckContentsInFileResult result = new CheckContentsInFileResult();
 
+            result.FileSummaryInfo = new AddonFileSummaryInfo();
+            result.FileSummaryInfo.TotalFiles = pFileList.Count;
+
             foreach (ArchiveFileInfo item in pFileList)
             {
                 string filename = item.FileName.ToLower();
@@ -568,12 +579,22 @@ namespace MSAddonLib.Domain.Addon
                 if (filename == ".addon")
                 {
                     result.HasAddonSignatureFile = true;
+                    result.FileSummaryInfo.SignatureFile = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
                     continue;
                 }
 
                 if (filename == "assetdata.jar")
                 {
                     result.HasAssetDataFile = true;
+                    result.FileSummaryInfo.ManifestArchive = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
                     continue;
                 }
 
@@ -601,11 +622,21 @@ namespace MSAddonLib.Domain.Addon
                 if (filename.EndsWith("verbs"))
                 {
                     result.HasVerbs = true;
+                    result.FileSummaryInfo.VerbFile = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
                     continue;
                 }
                 if (filename.EndsWith("statemachine"))
                 {
                     result.HasStateMachine = true;
+                    result.FileSummaryInfo.StateMachineFile = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
                     continue;
                 }
 
@@ -632,12 +663,18 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filename.StartsWith(@"stock\"))
+                if (filename.StartsWith(@"stock\") && filename.EndsWith(@"\object.xml"))
                 {
                     string[] parts = item.FileName.Split("\\".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length > 1)
                     {
-                        string stockName = parts[1];
+                        string stockText = Source.Archiver.ExtractArchivedFileToString(item.FileName)?.ToLower();
+                        string stockSubtype = "";
+                        if (stockText?.StartsWith("<set>") ?? false)
+                            stockSubtype = "Set:";
+                        else if (stockText?.StartsWith("<character>") ?? false)
+                            stockSubtype = "Character:";
+                        string stockName = $"{stockSubtype}{parts[1]}";
                         if (!string.IsNullOrEmpty(stockName))
                         {
                             if (result.StockAssets == null)
@@ -710,13 +747,17 @@ namespace MSAddonLib.Domain.Addon
         private CheckContentsInFileResult CheckContentsInFileList(string pRootPath)
         {
             CheckContentsInFileResult result = new CheckContentsInFileResult();
+            result.FileSummaryInfo = new AddonFileSummaryInfo();
 
             string prefix = pRootPath.ToLower();
             if (!prefix.EndsWith("\\"))
                 prefix += "\\";
             int prefixLen = prefix.Length;
 
-            foreach (string fileName in Directory.EnumerateFiles(pRootPath, "*", SearchOption.AllDirectories))
+           List<string> addonFiles = Directory.EnumerateFiles(pRootPath, "*", SearchOption.AllDirectories).ToList();
+           result.FileSummaryInfo.TotalFiles = addonFiles.Count;
+
+            foreach (string fileName in addonFiles)
             {
                 string relativePath = fileName;
                 string filenameLower = fileName.ToLower();
@@ -730,12 +771,14 @@ namespace MSAddonLib.Domain.Addon
                 if (filenameLower == ".addon")
                 {
                     result.HasAddonSignatureFile = true;
+                    result.FileSummaryInfo.SignatureFile = GetFileSummaryInfo(pRootPath, fileName);
                     continue;
                 }
 
                 if (filenameLower == "assetdata.jar")
                 {
                     result.HasAssetDataFile = true;
+                    result.FileSummaryInfo.ManifestArchive = GetFileSummaryInfo(pRootPath, fileName);
                     continue;
                 }
 
@@ -763,11 +806,13 @@ namespace MSAddonLib.Domain.Addon
                 if (filenameLower.EndsWith("verbs"))
                 {
                     result.HasVerbs = true;
+                    result.FileSummaryInfo.VerbFile = GetFileSummaryInfo(pRootPath, fileName);
                     continue;
                 }
                 if (filenameLower.EndsWith("statemachine"))
                 {
                     result.HasStateMachine = true;
+                    result.FileSummaryInfo.StateMachineFile = GetFileSummaryInfo(pRootPath, fileName);
                     continue;
                 }
 
@@ -804,12 +849,18 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filenameLower.StartsWith(@"stock\"))
+                if (filenameLower.StartsWith(@"stock\") && filenameLower.EndsWith(@"\object.xml"))
                 {
                     string[] parts = relativePath.Split("\\".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length > 1)
                     {
-                        string stockName = parts[1];
+                        string stockText = File.ReadAllText(Path.Combine(pRootPath, filenameLower))?.ToLower();
+                        string stockSubtype = "";
+                        if (stockText?.StartsWith("<set>") ?? false)
+                            stockSubtype = "Set:";
+                        else if (stockText?.StartsWith("<character>") ?? false)
+                            stockSubtype = "Character:";
+                        string stockName = $"{stockSubtype}{parts[1]}";
                         if (!string.IsNullOrEmpty(stockName))
                         {
                             if (result.StockAssets == null)
@@ -876,6 +927,22 @@ namespace MSAddonLib.Domain.Addon
             }
 
             return result;
+        }
+
+        private AddonFileInfo GetFileSummaryInfo(string pRootPath, string pFileName)
+        {
+            AddonFileInfo summaryFileInfo = null;
+            try
+            {
+                FileInfo info = new FileInfo(Path.Combine(pRootPath, pFileName));
+                summaryFileInfo = new AddonFileInfo()
+                {
+                    LastModified = info.LastWriteTime,
+                    Size = (ulong) info.Length
+                };
+            } catch { }
+
+            return summaryFileInfo;
         }
 
 
@@ -1287,6 +1354,8 @@ namespace MSAddonLib.Domain.Addon
             summary.AppendLine(string.Format("    Free: {0}", Free));
             if (LastCompiled.HasValue)
                 summary.AppendLine(string.Format($"    Last compiled: {LastCompiled.Value:u}"));
+            if(FileSummaryInfo != null)
+                summary.AppendLine($"    Total files: {FileSummaryInfo.TotalFiles}");
             if (!string.IsNullOrEmpty(Description))
             {
                 bool firstLine = true;
@@ -1487,6 +1556,28 @@ namespace MSAddonLib.Domain.Addon
     }
 
 
+    public sealed class AddonFileSummaryInfo
+    {
+        public int TotalFiles { get; set; }
+
+        public AddonFileInfo SignatureFile { get; set; }
+
+        public AddonFileInfo ManifestArchive { get; set; }
+
+        public AddonFileInfo StateMachineFile { get; set; }
+
+        public AddonFileInfo VerbFile { get; set; }
+    }
+
+
+    public sealed class AddonFileInfo
+    {
+        public ulong Size { get; set; }
+
+        public DateTime LastModified { get; set; }
+    }
+
+
     sealed class CheckContentsInFileResult
     {
         public bool HasAddonSignatureFile { get; set; }
@@ -1518,6 +1609,8 @@ namespace MSAddonLib.Domain.Addon
         public List<string> SoundFiles { get; set; }
         public List<string> FilterFiles { get; set; }
         public List<string> SpecialEffects { get; set; }
+
+        public AddonFileSummaryInfo FileSummaryInfo { get; set; }
     }
 
 }

@@ -135,7 +135,7 @@ namespace MSAddonLib.Persistence.AddonDB
 
             if (AssetType.HasFlag(AddonAssetType.Stock) && (((pPackage.StockAssets?.Count ?? 0) > 0)))
             {
-                SearchCommon2(pPackage.StockAssets, AddonAssetType.Stock, baseResultItem, found);
+                SearchCommon(pPackage.StockAssets, AddonAssetType.Stock, baseResultItem, found);
             }
 
             if (AssetType.HasFlag(AddonAssetType.StartMovie) && (((pPackage.DemoMovies?.Count ?? 0) > 0)))
@@ -180,8 +180,8 @@ namespace MSAddonLib.Persistence.AddonDB
 
             foreach (string asset in pAssets)
             {
-
-                Tuple<string, string> parts = Split(asset);
+                string splitChar = (pAssetType == AddonAssetType.Stock) ? ":" : "/";
+                Tuple<string, string> parts = Split(asset, splitChar);
                 if (parts == null)
                     continue;
 
@@ -285,6 +285,18 @@ namespace MSAddonLib.Persistence.AddonDB
                     item.AssetType = AddonAssetType.Decal;
                     item.AssetSubtype = decal.Group;
                     item.Name = $"{puppetName} : {decal.DecalName}";
+                    pFound.Add(item);
+                }
+
+                if (puppet.ExternDecalReferenced)
+                {
+                    if ((_nameRegex != null) && (!_nameRegex.IsMatch("Extern")))
+                        continue;
+
+                    AssetSearchResultItem item = (AssetSearchResultItem)pBaseResultItem.Clone();
+                    item.AssetType = AddonAssetType.Decal;
+                    item.AssetSubtype = "?";
+                    item.Name = $"{puppetName} : Extern Decal Referenced";
                     pFound.Add(item);
                 }
             }
@@ -554,11 +566,12 @@ namespace MSAddonLib.Persistence.AddonDB
             return builder.ToString().Trim();
         }
 
-        private Tuple<string, string> Split(string pString)
+        private Tuple<string, string> Split(string pString, string pSplitChar = "/")
         {
             if (string.IsNullOrEmpty(pString = pString.Trim()))
                 return null;
-            int index = pString.LastIndexOf("/");
+
+            int index = pString.LastIndexOf(pSplitChar, StringComparison.InvariantCulture);
             if (index < 0)
                 return new Tuple<string, string>(pString, null);
 

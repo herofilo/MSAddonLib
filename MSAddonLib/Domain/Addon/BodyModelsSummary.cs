@@ -250,12 +250,22 @@ namespace MSAddonLib.Domain.Addon
                     }
                 }
 
-                if ((puppet.Decals != null) && (puppet.Decals.Count > 0))
+                bool hasDecals = ((puppet.Decals != null) && (puppet.Decals.Count > 0));
+                if (hasDecals || puppet.ExternDecalReferenced)
                 {
-                    textBuilder.AppendLine("    Decals:");
-                    foreach (BodyModelSumDecal decal in puppet.Decals)
+                    if (hasDecals)
                     {
-                        textBuilder.AppendLine($"       {decal.DecalName} ({decal.Group})");
+                        textBuilder.AppendLine("    Decals:");
+                        foreach (BodyModelSumDecal decal in puppet.Decals)
+                        {
+                            textBuilder.AppendLine($"       {decal.DecalName} ({decal.Group})");
+                        }
+                        if(puppet.ExternDecalReferenced)
+                            textBuilder.AppendLine($"   Extern Decals Referenced");
+                    }
+                    else
+                    {
+                        textBuilder.AppendLine("    Decals: Extern Decals Referenced");
                     }
                 }
 
@@ -400,6 +410,8 @@ namespace MSAddonLib.Domain.Addon
         [XmlArrayItem("Decal")]
         public List<BodyModelSumDecal> Decals { get; set; }
 
+        public bool ExternDecalReferenced { get; set; }
+
         public string PuppetPath => $"Data/Puppets/{PuppetName}".ToLower();
 
         private string _RootPath;
@@ -508,16 +520,18 @@ namespace MSAddonLib.Domain.Addon
                 return true;
 
             bool insertOk = false;
+            
             try
             {
                 List<BodyModelSumDecal> puppetDecals = null;
+                bool externDecalsReferenced = false;
                 foreach (BodyPart item in pBodyParts)
                 {
                     BodyModelSumBodyPart part = new BodyModelSumBodyPart(_Archiver, PuppetName);
 
                     bool addNewPart;
                     List<BodyModelSumDecal> decals;
-                    if (!part.ExtractData(item, pPuppetTextures, out addNewPart, out decals, out pErrorText))
+                    if (!part.ExtractData(item, pPuppetTextures, out addNewPart, out decals, out externDecalsReferenced, out pErrorText))
                     {
                         return false;
                     }
@@ -547,6 +561,7 @@ namespace MSAddonLib.Domain.Addon
 
                 if ((puppetDecals != null) && (puppetDecals.Count > 0))
                     Decals = puppetDecals.OrderBy(o => o.Group + o.DecalName).ToList();
+                ExternDecalReferenced = externDecalsReferenced;
 
                 insertOk = true;
             }
@@ -615,11 +630,12 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
-        public bool ExtractData(BodyPart pItem, List<string> pPuppetTextures, out bool pAddNewPart, out List<BodyModelSumDecal> pDecals, out string pErrorText)
+        public bool ExtractData(BodyPart pItem, List<string> pPuppetTextures, out bool pAddNewPart, out List<BodyModelSumDecal> pDecals, out bool pExternDecalReferenced, out string pErrorText)
         {
             pAddNewPart = false;
             pErrorText = null;
             pDecals = null;
+            pExternDecalReferenced = false;
 
             FilePath = pItem.DescriptionFilePath;
             BodyPartType = pItem.PartsCovered;
@@ -639,7 +655,7 @@ namespace MSAddonLib.Domain.Addon
             bool fileProcessOk =
                 isBasicBodyPartFile
                     ? ProcessBasicBodyPartFile(fileContents, out pErrorText)
-                    : ProcessMorphBodyPartFile(fileContents, pPuppetTextures, out pDecals, out pErrorText);
+                    : ProcessMorphBodyPartFile(fileContents, pPuppetTextures, out pDecals, out pExternDecalReferenced, out pErrorText);
 
 
             if (isBasicBodyPartFile)
@@ -676,9 +692,10 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
-        private bool ProcessMorphBodyPartFile(string pText, List<string> pPuppetTextures, out List<BodyModelSumDecal> pDecals, out string pErrorText)
+        private bool ProcessMorphBodyPartFile(string pText, List<string> pPuppetTextures, out List<BodyModelSumDecal> pDecals, out bool pExternDecalReferenced, out string pErrorText)
         {
             pDecals = null;
+            pExternDecalReferenced = false;
             AssetFiles.BodyPartMorph bodyPart = AssetFiles.BodyPartMorph.LoadFromString(pText, out pErrorText);
             if (bodyPart == null)
                 return false;
@@ -701,9 +718,12 @@ namespace MSAddonLib.Domain.Addon
                 pDecals = new List<BodyModelSumDecal>();
                 foreach (mscopethingsBodyPart_MorphPartMaterial decalItem in bodyPart.decals)
                 {
-                    if(!CheckDecalFileExists(decalItem.maps, pPuppetTextures))
+                    if (!CheckDecalFileExists(decalItem.maps, pPuppetTextures))
+                    {
+                        pExternDecalReferenced = true;
                         continue;
-                    
+                    }
+
                     BodyModelSumDecal decal = new BodyModelSumDecal();
                     decal.DecalName = decalItem.name.Trim();
                     decal.Group = GetDecalGroup(decalItem.parameters).Trim();

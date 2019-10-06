@@ -178,7 +178,7 @@ namespace MSAddonLib.Domain.Addon
                 if (prop.MultiPart)
                     propName += " [Multipart]";
                 textBuilder.AppendLine($"{propName}");
-                if (prop.Variants != null)
+                if ((prop.Variants != null) && (prop.Variants.Count > 1))
                 {
                     textBuilder.AppendLine($"    Variants (default: {prop.DefaultVariant}):");
                     foreach (string variant in prop.Variants)

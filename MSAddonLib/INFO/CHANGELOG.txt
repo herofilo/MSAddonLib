@@ -1,6 +1,16 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.5.10 (20190106):
+	BodyPart: mscopethingsBodyPartEntry.int: had to change from byte to ulong because of unexpectedly high values in some props by Writerly
+	PropModelsSummary: ToString(): if Variants < 2, no output about variants
+	BodyModelsSummary: ToString(): reports about extern decals referenced
+	AddonPackage: 
+		- supports Stock subtypes
+		- added file summary info
+	AssetSearchCriteria:
+		- SearchDecals(): appends entry for Extern Decal Referenced
+		- AssetSearchCriteria: supports Stock subtypes
 
 * v1.5.9 (20191001):
 	SearchCriteriaBase.CreateMultiValuedRegex(): splits multi-search strings preferably by commas or spaces, in this order
