@@ -1,6 +1,10 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.5.11 (20190106):
+	AddonAssetSummary: new property PropVariants
+	PropModelsSummary.ToString(): if no animations, don't display any line about animations at all
+
 * v1.5.10 (20190106):
 	BodyPart: mscopethingsBodyPartEntry.int: had to change from byte to ulong because of unexpectedly high values in some props by Writerly
 	PropModelsSummary: ToString(): if Variants < 2, no output about variants

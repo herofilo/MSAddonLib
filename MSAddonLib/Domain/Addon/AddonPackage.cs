@@ -495,9 +495,21 @@ namespace MSAddonLib.Domain.Addon
 
             AssetSummary.Animations = UpdateAnimationsCount();
 
-            AssetSummary.Props += PropModelsSummary?.Props?.Props?.Count ?? 0;
+            if (PropModelsSummary?.Props?.Props != null)
+            { 
+                AssetSummary.Props = PropModelsSummary.Props.Props.Count;
+                int variants = 0;
+                foreach (PropModelSumProp prop in PropModelsSummary.Props.Props)
+                {
+                    if (prop.Variants == null)
+                        variants++;
+                    else
+                        variants += prop.Variants.Count;
+                }
+                AssetSummary.PropVariants = variants;
+            }
 
-            AssetSummary.Verbs +=
+            AssetSummary.Verbs =
                 (VerbsSummary?.Verbs?.Gaits?.Count ?? 0)
                 + (VerbsSummary?.Verbs?.Gestures?.Count ?? 0)
                 + (VerbsSummary?.Verbs?.PuppetSoloVerbs?.Count ?? 0)
@@ -754,8 +766,8 @@ namespace MSAddonLib.Domain.Addon
                 prefix += "\\";
             int prefixLen = prefix.Length;
 
-           List<string> addonFiles = Directory.EnumerateFiles(pRootPath, "*", SearchOption.AllDirectories).ToList();
-           result.FileSummaryInfo.TotalFiles = addonFiles.Count;
+            List<string> addonFiles = Directory.EnumerateFiles(pRootPath, "*", SearchOption.AllDirectories).ToList();
+            result.FileSummaryInfo.TotalFiles = addonFiles.Count;
 
             foreach (string fileName in addonFiles)
             {
@@ -938,9 +950,10 @@ namespace MSAddonLib.Domain.Addon
                 summaryFileInfo = new AddonFileInfo()
                 {
                     LastModified = info.LastWriteTime,
-                    Size = (ulong) info.Length
+                    Size = (ulong)info.Length
                 };
-            } catch { }
+            }
+            catch { }
 
             return summaryFileInfo;
         }
@@ -1354,7 +1367,7 @@ namespace MSAddonLib.Domain.Addon
             summary.AppendLine(string.Format("    Free: {0}", Free));
             if (LastCompiled.HasValue)
                 summary.AppendLine(string.Format($"    Last compiled: {LastCompiled.Value:u}"));
-            if(FileSummaryInfo != null)
+            if (FileSummaryInfo != null)
                 summary.AppendLine($"    Total files: {FileSummaryInfo.TotalFiles}");
             if (!string.IsNullOrEmpty(Description))
             {
@@ -1494,7 +1507,7 @@ namespace MSAddonLib.Domain.Addon
             if (HasIssues)
             {
                 summary.AppendLine("    !PROBLEMS:");
-                foreach(string line in Issues.Split("\n".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
+                foreach (string line in Issues.Split("\n".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
                     summary.AppendLine($"        {line}");
             }
 
@@ -1535,6 +1548,8 @@ namespace MSAddonLib.Domain.Addon
         public int Decals { get; set; }
 
         public int Props { get; set; }
+
+        public int PropVariants { get; set; }
 
         public int Animations { get; set; }
 

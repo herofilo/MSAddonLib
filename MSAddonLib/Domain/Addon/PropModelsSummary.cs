@@ -189,7 +189,7 @@ namespace MSAddonLib.Domain.Addon
                     textBuilder.AppendLine($"    Autoanimation: {prop.AutoAnimation}");
                 else
                 {
-                    if (prop.Animations != null)
+                    if ((prop.Animations != null) && (prop.Animations.Count > 0))
                     {
                         if (LoadAnimations)
                         {

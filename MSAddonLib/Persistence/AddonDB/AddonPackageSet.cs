@@ -22,7 +22,7 @@ namespace MSAddonLib.Persistence.AddonDB
 
         public const string DefaultAddonPackageSet = "AddonPackageSet";
 
-        public const string CurrentCatalogueVersion = "1.4";
+        public const string CurrentCatalogueVersion = "1.5";
 
 
         public MoviestormPaths MoviestormPaths
@@ -124,7 +124,7 @@ namespace MSAddonLib.Persistence.AddonDB
             {
                 needsUpdatingCatalogueVersion = true;
             }
-            if (catalogueVersionNumber < 0x010400)
+            if (catalogueVersionNumber < 0x010500)
             {
                 needsRecreatingAddonSummaries = true;
             }
