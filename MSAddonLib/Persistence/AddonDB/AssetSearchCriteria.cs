@@ -105,6 +105,10 @@ namespace MSAddonLib.Persistence.AddonDB
                 SearchAnimations(pPackage.AssetManifest, baseResultItem, found);
             }
 
+            if (AssetType.HasFlag(AddonAssetType.CuttingRoomAsset))
+            {
+                SearchCuttingRoomAssets(pPackage.CuttingRoomAssetsSummary, baseResultItem, found);
+            }
 
             if (AssetType.HasFlag(AddonAssetType.Material) && (((pPackage.Materials?.Count ?? 0) > 0)))
             {
@@ -122,15 +126,23 @@ namespace MSAddonLib.Persistence.AddonDB
                 SearchCommon(pPackage.SpecialEffects, AddonAssetType.SpecialEffect, baseResultItem, found);
             }
 
-            if (AssetType.HasFlag(AddonAssetType.Filter) && (((pPackage.Filters?.Count ?? 0) > 0)))
+            /*
+            if (AssetType.HasFlag(AddonAssetType.CuttingRoomAsset) && (((pPackage.Filters?.Count ?? 0) > 0)))
             {
-                SearchCommon(pPackage.Filters, AddonAssetType.Filter, baseResultItem, found);
+                SearchCommon(pPackage.Filters, AddonAssetType.CuttingRoomAsset, baseResultItem, found);
             }
+            */
 
             if (AssetType.HasFlag(AddonAssetType.SkyTexture) && (((pPackage.SkyTextures?.Count ?? 0) > 0)))
             {
                 SearchCommon(pPackage.SkyTextures, AddonAssetType.SkyTexture, baseResultItem, found);
             }
+
+            if (AssetType.HasFlag(AddonAssetType.OtherAsset) && (((pPackage.OtherAssets?.Count ?? 0) > 0)))
+            {
+                SearchCommon(pPackage.OtherAssets, AddonAssetType.OtherAsset, baseResultItem, found);
+            }
+
 
 
             if (AssetType.HasFlag(AddonAssetType.Stock) && (((pPackage.StockAssets?.Count ?? 0) > 0)))
@@ -146,6 +158,7 @@ namespace MSAddonLib.Persistence.AddonDB
 
             return found.Count > 0 ? found : null;
         }
+
 
 
 
@@ -180,7 +193,7 @@ namespace MSAddonLib.Persistence.AddonDB
 
             foreach (string asset in pAssets)
             {
-                string splitChar = (pAssetType == AddonAssetType.Stock) ? ":" : "/";
+                string splitChar = ((pAssetType == AddonAssetType.Stock) || (pAssetType == AddonAssetType.OtherAsset)) ? ":" : "/";
                 Tuple<string, string> parts = Split(asset, splitChar);
                 if (parts == null)
                     continue;
@@ -483,6 +496,53 @@ namespace MSAddonLib.Persistence.AddonDB
             }
 
             return null;
+        }
+
+
+        private void SearchCuttingRoomAssets(CuttingRoomAssetsSummary pCuttingRoomAssets, AssetSearchResultItem pBaseResultItem, List<AssetSearchResultItem> pFound)
+        {
+            if ((pCuttingRoomAssets?.Assets == null) || (!pCuttingRoomAssets.HasData))
+                return;
+
+            if (pCuttingRoomAssets.Assets.Flags.HasFlag(CuttingRoomAssetCollectionFlags.Filters))
+                SearchCuttingRoomAssetsKind(pCuttingRoomAssets.Assets.Filters, pBaseResultItem, pFound);
+            if (pCuttingRoomAssets.Assets.Flags.HasFlag(CuttingRoomAssetCollectionFlags.TextStyles))
+                SearchCuttingRoomAssetsKind(pCuttingRoomAssets.Assets.TextStyles, pBaseResultItem, pFound);
+            if (pCuttingRoomAssets.Assets.Flags.HasFlag(CuttingRoomAssetCollectionFlags.Transitions))
+                SearchCuttingRoomAssetsKind(pCuttingRoomAssets.Assets.Transitions, pBaseResultItem, pFound);
+        }
+
+        private void SearchCuttingRoomAssetsKind(List<CuttingRoomAssetItem> pAssets, AssetSearchResultItem pBaseResultItem, List<AssetSearchResultItem> pFound)
+        {
+            foreach (CuttingRoomAssetItem asset in pAssets)
+            {
+                if ((_nameRegex != null) && (!_nameRegex.IsMatch(asset.Name)))
+                    continue;
+
+                if (_assetSubTypesRegex != null)
+                    if (!_assetSubTypesRegex.IsMatch(asset.AssetSubtype))
+                        continue;
+
+                if (!TagFilterOk(asset.Tags))
+                    continue;
+                string tags = null;
+                if (!string.IsNullOrEmpty(asset.TagsRaw))
+                    tags = asset.TagsRaw.Replace(",", " ");
+
+                string extraInfo =
+                    string.IsNullOrEmpty(asset.Description) ? null : asset.Description;
+                if ((_assetExtraInfoRegex != null) && !_assetExtraInfoRegex.IsMatch(extraInfo ?? ExtraInfoNull))
+                    continue;
+
+                AssetSearchResultItem item = (AssetSearchResultItem)pBaseResultItem.Clone();
+                item.AssetType = AddonAssetType.CuttingRoomAsset;
+                item.AssetSubtype = asset.AssetSubtype;
+                item.Name = asset.Name;
+                item.Tags = tags;
+                item.ExtraInfo = extraInfo;
+
+                pFound.Add(item);
+            }
         }
 
 

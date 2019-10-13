@@ -10,8 +10,8 @@ namespace MSAddonLib.Persistence.AddonDB
         public int Publishers { get; set; }
 
         public int TotalAssets => Bodyparts + Decals + Props + Verbs + Animations
-                                  + Materials + Sounds + Filters + SpecialEffects
-                                  + Stocks + StartMovies + SkyTextures;
+                                  + Materials + Sounds + CuttingRoomAssets + SpecialEffects
+                                  + Stocks + StartMovies + SkyTextures + OtherAssets;
 
         public SearchStatistics(List<AssetSearchResultItem> pAssets)
         {
@@ -25,11 +25,12 @@ namespace MSAddonLib.Persistence.AddonDB
             Animations = pAssets.FindAll(o => o.AssetType == AddonAssetType.Animation).Count;
             Materials = pAssets.FindAll(o => o.AssetType == AddonAssetType.Material).Count;
             Sounds = pAssets.FindAll(o => o.AssetType == AddonAssetType.Sound).Count;
-            Filters = pAssets.FindAll(o => o.AssetType == AddonAssetType.Filter).Count;
+            CuttingRoomAssets = pAssets.FindAll(o => o.AssetType == AddonAssetType.CuttingRoomAsset).Count;
             SpecialEffects = pAssets.FindAll(o => o.AssetType == AddonAssetType.SpecialEffect).Count;
             Stocks = pAssets.FindAll(o => o.AssetType == AddonAssetType.Stock).Count;
             StartMovies = pAssets.FindAll(o => o.AssetType == AddonAssetType.StartMovie).Count;
             SkyTextures = pAssets.FindAll(o => o.AssetType == AddonAssetType.SkyTexture).Count;
+            OtherAssets = pAssets.FindAll(o => o.AssetType == AddonAssetType.OtherAsset).Count;
 
             List<string> addons = new List<string>();
             List<string> publishers = new List<string>();

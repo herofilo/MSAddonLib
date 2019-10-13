@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows.Forms;
 using System.Xml.Serialization;
 using MSAddonLib.Domain.AssetFiles;
 using MSAddonLib.Util;
@@ -63,6 +64,12 @@ namespace MSAddonLib.Domain.Addon
         public const string ThumbnailFilename = "thumbnail.jpg";
 
         private const double BytesPerMegabyte = 1024.0 * 1024.0;
+
+
+        private const string ScenarioPrefix = "data\\scenario\\";
+        private readonly int ScenarioPrefixLen = ScenarioPrefix.Length;
+
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------
 
@@ -225,21 +232,21 @@ namespace MSAddonLib.Domain.Addon
         /// </summary>
         public VerbsSummary VerbsSummary { get; set; }
 
+
+        public bool HasCuttingRoomAssets { get; set; }
+
+        public CuttingRoomAssetsSummary CuttingRoomAssetsSummary { get; set; }
+
         /// <summary>
         /// Sound files in the addon
         /// </summary>
         [XmlArrayItem("SoundFile")]
         public List<string> Sounds { get; set; }
 
-        /// <summary>
-        /// Filters in the addon
-        /// </summary>
-        [XmlArrayItem("Filter")]
-        public List<string> Filters { get; set; }
 
         /// <summary>
         /// Special effects in the addon
-        /// </summary>
+        /// </summary>       
         [XmlArrayItem("SpecialEffect")]
         public List<string> SpecialEffects { get; set; }
 
@@ -254,6 +261,9 @@ namespace MSAddonLib.Domain.Addon
         /// </summary>
         [XmlArrayItem("Sky")]
         public List<string> SkyTextures { get; set; }
+
+        [XmlArrayItem("Asset")]
+        public List<string> OtherAssets { get; set; }
 
         // --------------------------
 
@@ -419,6 +429,8 @@ namespace MSAddonLib.Domain.Addon
 
             HasVerbs = contentsSummary.HasVerbs;
 
+            HasCuttingRoomAssets = contentsSummary.HasCuttingRoomAssets;
+
             try
             {
                 RetrieveAddonSignatureInfo();
@@ -452,9 +464,9 @@ namespace MSAddonLib.Domain.Addon
 
             HasStateMachine = contentsSummary.HasStateMachine;
 
+            string errorText;
             if (HasVerbs || HasStateMachine)
             {
-                string errorText;
                 VerbsSummary = new VerbsSummary(Source, pProcessingFlags.HasFlag(ProcessingFlags.ListCompactDupVerbsByName));
 
                 if (!(_verbSummaryPopulationOk = VerbsSummary.PopulateSummary(out errorText)))
@@ -463,15 +475,26 @@ namespace MSAddonLib.Domain.Addon
                 }
             }
 
+            if (HasCuttingRoomAssets)
+            {
+                CuttingRoomAssetsSummary = new CuttingRoomAssetsSummary(Source);
+                if (!CuttingRoomAssetsSummary.PopulateSummary(out errorText))
+                {
+                    _issuesStringBuilder.AppendLine($"CuttingRoomAssetsSummary: {errorText}");
+                }
+            }
+
             Sounds = GetSounds(contentsSummary.SoundFiles);
 
-            Filters = GetFilters(contentsSummary.FilterFiles);
+            // Filters = GetFilters(contentsSummary.FilterFiles);
 
             SpecialEffects = GetSpecialEffects(contentsSummary.SpecialEffects);
 
             Materials = GetMaterials(Source, contentsSummary.MaterialsFiles);
 
             SkyTextures = GetSkies(contentsSummary.SkyFiles);
+
+            OtherAssets = contentsSummary.OtherAssets;
 
             Issues = _issuesStringBuilder.ToString()?.Trim();
 
@@ -518,11 +541,16 @@ namespace MSAddonLib.Domain.Addon
                 + (VerbsSummary?.Verbs?.HeldPropsVerbs?.Count ?? 0)
                 + (VerbsSummary?.Verbs?.InteractivePropsVerbs?.Count ?? 0);
 
+            AssetSummary.CuttingRoomAssets =
+                (CuttingRoomAssetsSummary?.Assets?.Filters?.Count ?? 0)
+                + (CuttingRoomAssetsSummary?.Assets?.TextStyles?.Count ?? 0)
+                + (CuttingRoomAssetsSummary?.Assets?.Transitions?.Count ?? 0);
+            
             AssetSummary.Sounds = Sounds?.Count ?? 0;
-            AssetSummary.Filters = Filters?.Count ?? 0;
             AssetSummary.SpecialEffects = SpecialEffects?.Count ?? 0;
             AssetSummary.Materials = Materials?.Count ?? 0;
             AssetSummary.SkyTextures = SkyTextures?.Count ?? 0;
+            AssetSummary.OtherAssets = OtherAssets?.Count ?? 0;
 
             AssetSummary.Stocks = StockAssets?.Count ?? 0;
             AssetSummary.StartMovies = DemoMovies?.Count ?? 0;
@@ -717,13 +745,9 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filename.StartsWith("data\\cuttingroom\\filters\\") && !item.IsDirectory)
+                if (!result.HasCuttingRoomAssets && filename.StartsWith("data\\cuttingroom") && filename.EndsWith("object.dat"))
                 {
-                    string path = Path.GetDirectoryName(item.FileName);
-                    if (result.FilterFiles == null)
-                        result.FilterFiles = new List<string>();
-                    if (!result.FilterFiles.Contains(path))
-                        result.FilterFiles.Add(path);
+                    result.HasCuttingRoomAssets = true;
                     continue;
                 }
 
@@ -748,6 +772,23 @@ namespace MSAddonLib.Domain.Addon
                     if (result.SpecialEffects == null)
                         result.SpecialEffects = new List<string>();
                     result.SpecialEffects.Add(item.FileName);
+                }
+
+                if (filename.StartsWith("data\\terrain_masks") && filename.EndsWith(".png"))
+                {
+                    if(result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    result.OtherAssets.Add("TerrainMask:" + Path.GetFileNameWithoutExtension(item.FileName));
+                }
+
+                if (filename.StartsWith("data\\scenario\\"))
+                {
+                    string scenarioName = GetScenarioName(item.FileName);
+
+                    if (result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    if (!result.OtherAssets.Contains(scenarioName))
+                        result.OtherAssets.Add(scenarioName);
                 }
 
             }
@@ -903,13 +944,9 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filenameLower.StartsWith("data\\cuttingroom\\filters\\") /* && !fileName.IsDirectory */)
+                if (!result.HasCuttingRoomAssets && filenameLower.StartsWith("data\\cuttingroom") && filenameLower.EndsWith("object.dat"))
                 {
-                    string path = Path.GetDirectoryName(relativePath);
-                    if (result.FilterFiles == null)
-                        result.FilterFiles = new List<string>();
-                    if (!result.FilterFiles.Contains(path))
-                        result.FilterFiles.Add(path);
+                    result.HasCuttingRoomAssets = true;
                     continue;
                 }
 
@@ -936,10 +973,37 @@ namespace MSAddonLib.Domain.Addon
                     result.SpecialEffects.Add(relativePath);
                 }
 
-            }
+                if (filenameLower.StartsWith("data\\terrain_masks") && filenameLower.EndsWith(".png"))
+                {
+                    if (result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    result.OtherAssets.Add("TerrainMask:" + Path.GetFileNameWithoutExtension(relativePath));
+                }
 
+                if (filenameLower.StartsWith("data\\scenario\\"))
+                {
+                    string scenarioName = GetScenarioName(relativePath);
+
+                    if (result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    if(!result.OtherAssets.Contains(scenarioName))
+                        result.OtherAssets.Add(scenarioName);
+                }
+            }
             return result;
         }
+
+        private string GetScenarioName(string pPath)
+        {
+            string name = pPath.Remove(0, ScenarioPrefixLen);
+            int index = name.IndexOf("\\");
+
+            if(index >= 0)
+                name = name.Remove(index);
+
+            return $"Scenario:{name}";
+        }
+
 
         private AddonFileInfo GetFileSummaryInfo(string pRootPath, string pFileName)
         {
@@ -1269,6 +1333,7 @@ namespace MSAddonLib.Domain.Addon
             return sounds;
         }
 
+        /*
         private List<string> GetFilters(List<string> pFilterFiles)
         {
             if ((pFilterFiles == null) || (pFilterFiles.Count == 0))
@@ -1289,7 +1354,7 @@ namespace MSAddonLib.Domain.Addon
 
             return filters;
         }
-
+        */
 
 
         private List<string> GetSpecialEffects(List<string> pSpecialEffects)
@@ -1496,7 +1561,20 @@ namespace MSAddonLib.Domain.Addon
 
             AppendMiscList(summary, Sounds, "Sounds");
 
-            AppendMiscList(summary, Filters, "Filters");
+            if (HasCuttingRoomAssets && CuttingRoomAssetsSummary.HasData)
+            {
+                string text = CuttingRoomAssetsSummary.ToString();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    summary.AppendLine("    Cutting Room Assets:");
+                    foreach (string line in text.Split("\n".ToCharArray()))
+                    {
+                        if (!string.IsNullOrEmpty(line.Trim()))
+                            summary.AppendLine($"      {line}");
+                    }
+                }
+            }
+            // AppendMiscList(summary, Filters, "Filters");
 
             AppendMiscList(summary, SpecialEffects, "Special Effects");
 
@@ -1504,6 +1582,8 @@ namespace MSAddonLib.Domain.Addon
 
             AppendMiscList(summary, SkyTextures, "Sky Textures");
 
+            AppendMiscList(summary, OtherAssets, "Other Assets");
+            
             if (HasIssues)
             {
                 summary.AppendLine("    !PROBLEMS:");
@@ -1557,13 +1637,15 @@ namespace MSAddonLib.Domain.Addon
 
         public int Sounds { get; set; }
 
-        public int Filters { get; set; }
+        public int CuttingRoomAssets { get; set; }
 
         public int SpecialEffects { get; set; }
 
         public int Materials { get; set; }
 
         public int SkyTextures { get; set; }
+
+        public int OtherAssets { get; set; }
 
         public int Stocks { get; set; }
 
@@ -1615,6 +1697,8 @@ namespace MSAddonLib.Domain.Addon
 
         public bool HasVerbs { get; set; }
 
+        public bool HasCuttingRoomAssets { get; set; }
+
         public bool HasCal3DMeshFiles { get; set; }
 
         public List<string> MaterialsFiles { get; set; }
@@ -1622,8 +1706,12 @@ namespace MSAddonLib.Domain.Addon
         public List<string> SkyFiles { get; set; }
         // public List<string> PropAnimations { get; set; }
         public List<string> SoundFiles { get; set; }
-        public List<string> FilterFiles { get; set; }
+
+        // public List<string> FilterFiles { get; set; }
+
         public List<string> SpecialEffects { get; set; }
+
+        public List<string> OtherAssets { get; set; }
 
         public AddonFileSummaryInfo FileSummaryInfo { get; set; }
     }

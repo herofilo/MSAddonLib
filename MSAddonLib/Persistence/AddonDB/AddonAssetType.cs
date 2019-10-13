@@ -13,11 +13,12 @@ namespace MSAddonLib.Persistence.AddonDB
         Animation = 0x0040,
         Material = 0x0100,
         Sound = 0x0200,
-        Filter = 0x0400,
+        CuttingRoomAsset = 0x0400,
         SkyTexture = 0x0800,
         SpecialEffect = 0x1000,
-        Stock = 0x2000,
-        StartMovie = 0x4000,
+        OtherAsset = 0x2000,
+        Stock = 0x4000,
+        StartMovie = 0x8000,
         Any = 0xffff
     }
 }
