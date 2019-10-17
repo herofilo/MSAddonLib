@@ -284,7 +284,7 @@ namespace MSAddonLib.Persistence.AddonDB
                     continue;
 
                 string puppetName = puppet.PuppetName;
-
+                bool foundAnyDecal = false;
                 foreach (BodyModelSumDecal decal in puppet.Decals)
                 {
                     if ((_nameRegex != null) && (!_nameRegex.IsMatch(decal.DecalName)))
@@ -299,11 +299,15 @@ namespace MSAddonLib.Persistence.AddonDB
                     item.AssetSubtype = decal.Group;
                     item.Name = $"{puppetName} : {decal.DecalName}";
                     pFound.Add(item);
+                    foundAnyDecal = true;
                 }
 
-                if (puppet.ExternDecalReferenced)
+                if (puppet.ExternDecalReferenced && !foundAnyDecal)
                 {
                     if ((_nameRegex != null) && (!_nameRegex.IsMatch("Extern")))
+                        continue;
+
+                    if ((_assetSubTypesRegex != null) && (!_assetSubTypesRegex.IsMatch("?")))
                         continue;
 
                     AssetSearchResultItem item = (AssetSearchResultItem)pBaseResultItem.Clone();

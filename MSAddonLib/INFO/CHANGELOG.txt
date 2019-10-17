@@ -1,6 +1,12 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.6.1 (20191016):
+	AssetSearchCriteria.SearchDecals(): regarding Extern Decals Referenced:
+		- are filtered by subtype
+		- only listed if no decals in the puppet model
+	BodyModelsSummary.ToString(): 'Only extern Decals referenced' only printed if no other decals in the puppet model
+
 * v1.6.0 (20191012):
 	AddonPackage: CuttingRoomAssetsSummary replaces Filters
 

@@ -260,12 +260,12 @@ namespace MSAddonLib.Domain.Addon
                         {
                             textBuilder.AppendLine($"       {decal.DecalName} ({decal.Group})");
                         }
-                        if(puppet.ExternDecalReferenced)
-                            textBuilder.AppendLine($"   Extern Decals Referenced");
+                        // if(puppet.ExternDecalReferenced)
+                        //    textBuilder.AppendLine($"   Extern Decals Referenced");
                     }
                     else
                     {
-                        textBuilder.AppendLine("    Decals: Extern Decals Referenced");
+                        textBuilder.AppendLine("    Decals: Only extern Decals referenced");
                     }
                 }
 
