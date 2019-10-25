@@ -1,6 +1,12 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.7.0 (20191019):
+	AddonPackage: new properties: 
+		Fingerprint
+		GeneratedDateTime
+		RegistryVersion
+
 * v1.6.1 (20191016):
 	AssetSearchCriteria.SearchDecals(): regarding Extern Decals Referenced:
 		- are filtered by subtype

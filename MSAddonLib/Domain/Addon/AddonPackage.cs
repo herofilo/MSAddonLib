@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.Serialization;
@@ -69,6 +70,7 @@ namespace MSAddonLib.Domain.Addon
         private const string ScenarioPrefix = "data\\scenario\\";
         private readonly int ScenarioPrefixLen = ScenarioPrefix.Length;
 
+        private const string CurrentRegistryVersion = "1.7";
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------
@@ -264,6 +266,17 @@ namespace MSAddonLib.Domain.Addon
 
         [XmlArrayItem("Asset")]
         public List<string> OtherAssets { get; set; }
+
+
+        /// <summary>
+        /// Fingerprint of the addon
+        /// </summary>
+        public string FingerPrint { get; set; }
+
+
+        public DateTime? GeneratedDateTime { get; set; }
+
+        public string RegistryVersion { get; set; } = CurrentRegistryVersion;
 
         // --------------------------
 
@@ -500,8 +513,14 @@ namespace MSAddonLib.Domain.Addon
 
             UpdateAssetSummary();
 
+            FingerPrint = CalculateFingerPrint(contentsSummary.FingerPrintData);
+
+            GeneratedDateTime = DateTime.Now;
+
             return true;
         }
+
+
 
         public void UpdateAssetSummary()
         {
@@ -611,11 +630,12 @@ namespace MSAddonLib.Domain.Addon
 
             result.FileSummaryInfo = new AddonFileSummaryInfo();
             result.FileSummaryInfo.TotalFiles = pFileList.Count;
+            result.FingerPrintData = new List<string>();
 
             foreach (ArchiveFileInfo item in pFileList)
             {
                 string filename = item.FileName.ToLower();
-
+                
                 if (filename == ".addon")
                 {
                     result.HasAddonSignatureFile = true;
@@ -635,6 +655,7 @@ namespace MSAddonLib.Domain.Addon
                         LastModified = item.LastWriteTime,
                         Size = item.Size
                     };
+                    result.FingerPrintData.Add($"{filename}:{item.Size}:{item.LastWriteTime:s}^");
                     continue;
                 }
 
@@ -656,8 +677,19 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
+                if (filename == "meshdata.data")
+                {
+                    result.FingerPrintData.Add($"{filename}:{item.Size}:{item.LastWriteTime:s}^");
+                    continue;
+                }
+
                 if (!result.HasDataContents && filename.StartsWith("data\\") && !filename.EndsWith("data\\"))
                     result.HasDataContents = true;
+
+                if (filename.StartsWith("data\\") && !item.IsDirectory)
+                {
+                    result.FingerPrintData.Add($"{filename}:{item.Size}:{item.LastWriteTime:s}^");
+                }
 
                 if (filename.EndsWith("verbs"))
                 {
@@ -801,6 +833,7 @@ namespace MSAddonLib.Domain.Addon
         {
             CheckContentsInFileResult result = new CheckContentsInFileResult();
             result.FileSummaryInfo = new AddonFileSummaryInfo();
+            result.FingerPrintData = new List<string>();
 
             string prefix = pRootPath.ToLower();
             if (!prefix.EndsWith("\\"))
@@ -814,6 +847,8 @@ namespace MSAddonLib.Domain.Addon
             {
                 string relativePath = fileName;
                 string filenameLower = fileName.ToLower();
+                ulong fileSize;
+                DateTime fileLastWriteTime;
                 if (filenameLower.StartsWith(prefix))
                 {
                     filenameLower = filenameLower.Remove(0, prefixLen);
@@ -832,6 +867,8 @@ namespace MSAddonLib.Domain.Addon
                 {
                     result.HasAssetDataFile = true;
                     result.FileSummaryInfo.ManifestArchive = GetFileSummaryInfo(pRootPath, fileName);
+                    GetFileData(fileName, out fileSize, out fileLastWriteTime);
+                    result.FingerPrintData.Add($"{filenameLower}:{fileSize}:{fileLastWriteTime:s}^");
                     continue;
                 }
 
@@ -853,8 +890,22 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
+                if (filenameLower == "meshdata.data")
+                {
+                    GetFileData(fileName, out fileSize, out fileLastWriteTime);
+                    result.FingerPrintData.Add($"{filenameLower}:{fileSize}:{fileLastWriteTime:s}^");
+                    continue;
+                }
+
                 if (!result.HasDataContents && filenameLower.StartsWith("data\\") && !filenameLower.EndsWith("data\\"))
                     result.HasDataContents = true;
+
+
+                if (filenameLower.StartsWith("data\\"))
+                {
+                    GetFileData(fileName, out fileSize, out fileLastWriteTime);
+                    result.FingerPrintData.Add($"{filenameLower}:{fileSize}:{fileLastWriteTime:s}^");
+                }
 
                 if (filenameLower.EndsWith("verbs"))
                 {
@@ -990,8 +1041,43 @@ namespace MSAddonLib.Domain.Addon
                         result.OtherAssets.Add(scenarioName);
                 }
             }
+
             return result;
         }
+
+        private void GetFileData(string pFileName, out ulong pFileSize, out DateTime pFileLastWriteTime)
+        {
+            FileInfo info = new FileInfo(pFileName);
+            pFileSize = (ulong) info.Length;
+            pFileLastWriteTime = info.LastWriteTime;
+        }
+
+
+        private string CalculateFingerPrint(List<string> pFingerPrintData)
+        {
+            pFingerPrintData.Sort();
+            
+            StringBuilder builder = new StringBuilder();
+            foreach (string line in pFingerPrintData)
+            {
+                builder.Append(line);
+            }
+
+            string fingerprintText = builder.ToString();
+            byte[] bytes = Encoding.UTF8.GetBytes(fingerprintText);
+
+            SHA256 sha256 = SHA256.Create();
+            byte[] hash = sha256.ComputeHash(bytes);
+
+            builder.Clear();
+            foreach (byte x in hash)
+            {
+                builder.Append($"{x:x2}");
+            }
+
+            return builder.ToString();
+        }
+        
 
         private string GetScenarioName(string pPath)
         {
@@ -1478,6 +1564,10 @@ namespace MSAddonLib.Domain.Addon
             }
             if (!string.IsNullOrEmpty(Revision))
                 summary.AppendLine(string.Format("    Revision: {0}", Revision));
+
+            if (!string.IsNullOrEmpty(FingerPrint))
+                summary.AppendLine($"    * Fingerprint: {FingerPrint}");
+            
             // summary.AppendLine(string.Format("Path: {0}", _addonPath));
             if (MeshDataSizeMbytes.HasValue && (MeshDataSizeMbytes.Value > 0))
             {
@@ -1583,7 +1673,7 @@ namespace MSAddonLib.Domain.Addon
             AppendMiscList(summary, SkyTextures, "Sky Textures");
 
             AppendMiscList(summary, OtherAssets, "Other Assets");
-            
+
             if (HasIssues)
             {
                 summary.AppendLine("    !PROBLEMS:");
@@ -1714,6 +1804,8 @@ namespace MSAddonLib.Domain.Addon
         public List<string> OtherAssets { get; set; }
 
         public AddonFileSummaryInfo FileSummaryInfo { get; set; }
+
+        public List<string> FingerPrintData { get; set; }
     }
 
 }
