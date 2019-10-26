@@ -7,7 +7,7 @@ namespace MSAddonLib.Domain
 {
     public class DiskEntityFolder : DiskEntityBase, IDiskEntity
     {
-        public DiskEntityFolder(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
+        public DiskEntityFolder(string pEntityPath, string pArchivedPath, IReportWriter pReportWriter) : base(pEntityPath, pArchivedPath, pReportWriter)
         {
         }
 
@@ -19,7 +19,7 @@ namespace MSAddonLib.Domain
         {
             if (IsAddonFolder(EntityPath))
             {
-                new DiskEntityAddonFolder(EntityPath, InsideArchive, ReportWriter).CheckEntity(pProcessingFlags);
+                new DiskEntityAddonFolder(EntityPath, ArchivedPath, ReportWriter).CheckEntity(pProcessingFlags);
                 return true;
             }
 
@@ -46,11 +46,10 @@ namespace MSAddonLib.Domain
             DirectoryInfo directoryInfo = new DirectoryInfo(EntityPath);
 
             FileInfo[] addonInfoList = directoryInfo.GetFiles("*.addon", SearchOption.TopDirectoryOnly);
-            
 
             foreach (FileInfo item in addonInfoList)
             {
-                new DiskEntityAddon(item.FullName, InsideArchive, ReportWriter).CheckEntity(pProcessingFlags);
+                new DiskEntityAddon(item.FullName, ArchivedPath, ReportWriter).CheckEntity(pProcessingFlags);
             }
 
 
@@ -58,7 +57,7 @@ namespace MSAddonLib.Domain
 
             foreach (FileInfo item in sketchupInfoList)
             {
-                new DiskEntitySketchup(item.FullName, InsideArchive, ReportWriter).CheckEntity(pProcessingFlags);
+                new DiskEntitySketchup(item.FullName, null, ReportWriter).CheckEntity(pProcessingFlags);
             }
 
 
@@ -70,18 +69,22 @@ namespace MSAddonLib.Domain
 
             foreach (FileInfo item in archiveInfoList)
             {
-                new DiskEntityArchive(item.FullName, InsideArchive, ReportWriter).CheckEntity(pProcessingFlags);
+                new DiskEntityArchive(item.FullName, ArchivedPath, ReportWriter).CheckEntity(pProcessingFlags);
             }
 
 
-            DirectoryInfo[] subdirectories = directoryInfo.GetDirectories();
-            if (subdirectories.Length > 0)
+            if (!pProcessingFlags.HasFlag(ProcessingFlags.FolderTopOnlySearch))
             {
-                foreach (DirectoryInfo subdirectoryInfo in subdirectories)
+                DirectoryInfo[] subdirectories = directoryInfo.GetDirectories();
+                if (subdirectories.Length > 0)
                 {
-                    new DiskEntityFolder(subdirectoryInfo.FullName, InsideArchive, ReportWriter).CheckEntity(pProcessingFlags);
+                    foreach (DirectoryInfo subdirectoryInfo in subdirectories)
+                    {
+                        new DiskEntityFolder(subdirectoryInfo.FullName, null, ReportWriter).CheckEntity(pProcessingFlags);
+                    }
                 }
             }
+
             return true;
         }
 

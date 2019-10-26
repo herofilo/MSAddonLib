@@ -10,7 +10,7 @@ namespace MSAddonLib.Domain
 {
     public class DiskEntityArchive : DiskEntityBase, IDiskEntity
     {
-        public DiskEntityArchive(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter) : base(pEntityPath, pInsideArchive, pReportWriter)
+        public DiskEntityArchive(string pEntityPath, string pArchivedPath, IReportWriter pReportWriter) : base(pEntityPath, pArchivedPath, pReportWriter)
         {
         }
 
@@ -160,10 +160,12 @@ namespace MSAddonLib.Domain
                         isAddonFile = true;
                     }
 
+                    string archivedPath = $"{AbsolutePath}#{fileName}";
+
                     IDiskEntity diskEntity =
                         isAddonFile
-                        ? new DiskEntityAddon(fileName, true, ReportWriter)
-                        : (IDiskEntity)new DiskEntitySketchup(fileName, true, ReportWriter);
+                        ? new DiskEntityAddon(fileName, archivedPath, ReportWriter)
+                        : (IDiskEntity)new DiskEntitySketchup(fileName, archivedPath, ReportWriter);
 
                     diskEntity.CheckEntity(pProcessingFlags);
 

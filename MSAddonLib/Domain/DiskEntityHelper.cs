@@ -6,7 +6,7 @@ namespace MSAddonLib.Domain
     {
         // ----------------------------------------------------------------------------------------------
 
-        public static IDiskEntity GetEntity(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter)
+        public static IDiskEntity GetEntity(string pEntityPath, string pArchivedPath, IReportWriter pReportWriter)
         {
             IDiskEntity diskEntity = null;
 
@@ -16,19 +16,19 @@ namespace MSAddonLib.Domain
             switch (DiskEntityBase.GetEntityType(pEntityPath))
             {
                 case DiskEntityType.Folder:
-                    diskEntity = new DiskEntityFolder(pEntityPath, pInsideArchive, pReportWriter);                   
+                    diskEntity = new DiskEntityFolder(pEntityPath, pArchivedPath, pReportWriter);                   
                     break;
                 case DiskEntityType.AddonFolder:
-                    diskEntity = new DiskEntityAddonFolder(pEntityPath, pInsideArchive, pReportWriter);
+                    diskEntity = new DiskEntityAddonFolder(pEntityPath, pArchivedPath, pReportWriter);
                     break;
                 case DiskEntityType.Archive:
-                    diskEntity = new DiskEntityArchive(pEntityPath, pInsideArchive, pReportWriter);                    
+                    diskEntity = new DiskEntityArchive(pEntityPath, pArchivedPath, pReportWriter);                    
                     break;
                 case DiskEntityType.SketchupFile:
-                    diskEntity = new DiskEntitySketchup(pEntityPath, pInsideArchive, pReportWriter);
+                    diskEntity = new DiskEntitySketchup(pEntityPath, pArchivedPath, pReportWriter);
                     break;
                 case DiskEntityType.AddonFile:
-                    diskEntity = new DiskEntityAddon(pEntityPath, pInsideArchive, pReportWriter);                    
+                    diskEntity = new DiskEntityAddon(pEntityPath, pArchivedPath, pReportWriter);                    
                     break;
             }
 

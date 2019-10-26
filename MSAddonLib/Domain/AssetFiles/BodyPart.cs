@@ -227,13 +227,13 @@ namespace MSAddonLib.Domain.AssetFiles
     [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true)]
     public partial class mscopethingsBodyPartEntry
     {
-
-        private byte intField;
+        // Originally byte - had to change to ulong because of unexpectedly high values in some props by Writerly
+        private ulong intField;
 
         private mscopethingsBodyPartEntryList listField;
 
         /// <comentarios/>
-        public byte @int
+        public ulong @int
         {
             get { return this.intField; }
             set { this.intField = value; }

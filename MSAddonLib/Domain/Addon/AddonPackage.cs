@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Windows.Forms;
 using System.Xml.Serialization;
 using MSAddonLib.Domain.AssetFiles;
 using MSAddonLib.Util;
@@ -62,6 +65,13 @@ namespace MSAddonLib.Domain.Addon
         public const string ThumbnailFilename = "thumbnail.jpg";
 
         private const double BytesPerMegabyte = 1024.0 * 1024.0;
+
+
+        private const string ScenarioPrefix = "data\\scenario\\";
+        private readonly int ScenarioPrefixLen = ScenarioPrefix.Length;
+
+        private const string CurrentRegistryVersion = "1.7";
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------
 
@@ -126,12 +136,19 @@ namespace MSAddonLib.Domain.Addon
         /// <summary>
         /// Path to the source file/folder
         /// </summary>
-        public string Location { get; set; }
+        [XmlIgnore]
+        public string Location => Source.ArchivedPath ?? Source.SourcePath;
 
         /// <summary>
-        /// Datetime of last modification of signations file
+        /// Datetime of last modification of signature file
         /// </summary>
         public DateTime? LastCompiled { get; set; }
+
+        /// <summary>
+        /// Can be recompiled
+        /// </summary>
+        [XmlIgnore]
+        public bool Recompilable => (MeshDataSizeMbytes == null) || (MeshDataSizeMbytes == 0.0) || HasCal3DMeshFiles;
 
         /// <summary>
         /// Addon signature file of the addon
@@ -169,6 +186,11 @@ namespace MSAddonLib.Domain.Addon
         public bool HasDataFolder { get; set; }
 
         /// <summary>
+        /// Summary information about the files in the addon
+        /// </summary>
+        public AddonFileSummaryInfo FileSummaryInfo { get; set; }
+
+        /// <summary>
         /// List of demo (starter) movies included
         /// </summary>
         [XmlArrayItem("Movie")]
@@ -195,6 +217,7 @@ namespace MSAddonLib.Domain.Addon
         /// </summary>
         public bool HasVerbs { get; set; }
 
+        public AddonAssetSummary AssetSummary { get; set; }
 
         /// <summary>
         /// Summary info about body models
@@ -211,21 +234,21 @@ namespace MSAddonLib.Domain.Addon
         /// </summary>
         public VerbsSummary VerbsSummary { get; set; }
 
+
+        public bool HasCuttingRoomAssets { get; set; }
+
+        public CuttingRoomAssetsSummary CuttingRoomAssetsSummary { get; set; }
+
         /// <summary>
         /// Sound files in the addon
         /// </summary>
         [XmlArrayItem("SoundFile")]
         public List<string> Sounds { get; set; }
 
-        /// <summary>
-        /// Filters in the addon
-        /// </summary>
-        [XmlArrayItem("Filter")]
-        public List<string> Filters { get; set; }
 
         /// <summary>
         /// Special effects in the addon
-        /// </summary>
+        /// </summary>       
         [XmlArrayItem("SpecialEffect")]
         public List<string> SpecialEffects { get; set; }
 
@@ -241,19 +264,32 @@ namespace MSAddonLib.Domain.Addon
         [XmlArrayItem("Sky")]
         public List<string> SkyTextures { get; set; }
 
+        [XmlArrayItem("Asset")]
+        public List<string> OtherAssets { get; set; }
+
+
+        /// <summary>
+        /// Fingerprint of the addon
+        /// </summary>
+        public string FingerPrint { get; set; }
+
+
+        public DateTime? GeneratedDateTime { get; set; }
+
+        public string RegistryVersion { get; set; } = CurrentRegistryVersion;
+
         // --------------------------
 
         /// <summary>
         /// The addon has some issue
         /// </summary>
         [XmlIgnore]
-        public bool HasIssues => !string.IsNullOrEmpty(_issuesStringBuilder.ToString());
+        public bool HasIssues => !string.IsNullOrEmpty(Issues);
 
         /// <summary>
         /// Text of the issues
         /// </summary>
-        [XmlIgnore]
-        public string Issues { get { return _issuesStringBuilder.ToString(); } }
+        public string Issues { get; set; }
 
 
         private readonly StringBuilder _issuesStringBuilder = new StringBuilder();
@@ -297,7 +333,8 @@ namespace MSAddonLib.Domain.Addon
         /// <param name="pArchiver">Archiver for accessing the addon archive contents</param>
         /// <param name="pProcessingFlags">Processing flags</param>
         /// <param name="pTemporaryFolder">Path to the root temporary folder</param>
-        public AddonPackage(SevenZipArchiver pArchiver, ProcessingFlags pProcessingFlags, string pTemporaryFolder = null)
+        /// <param name="pArchivedPath">Path of archived file</param>
+        public AddonPackage(SevenZipArchiver pArchiver, ProcessingFlags pProcessingFlags, string pTemporaryFolder = null, string pArchivedPath = null)
         {
             if (pArchiver == null)
             {
@@ -309,7 +346,7 @@ namespace MSAddonLib.Domain.Addon
                 throw new Exception($"Error extracting the list of archived files: {pArchiver.LastErrorText}");
             }
 
-            Source = new AddonPackageSource(pArchiver);
+            Source = new AddonPackageSource(pArchiver, pArchivedPath);
 
             AddonFormat = AddonPackageFormat.PackageFile;
 
@@ -376,7 +413,7 @@ namespace MSAddonLib.Domain.Addon
             if (string.IsNullOrEmpty(pTemporaryFolder = pTemporaryFolder.Trim()) || !Directory.Exists(pTemporaryFolder))
                 throw new Exception("No temporary folder found");
 
-            Location = Source.SourcePath;
+            // Location = string.IsNullOrEmpty(Source.ArchivedPath) ? Source.SourcePath : Source.ArchivedPath;
 
             // bool isFolderAddon = Source.SourceType == AddonPackageSourceType.Folder;
 
@@ -398,12 +435,23 @@ namespace MSAddonLib.Domain.Addon
                 throw new Exception("No Addon AssetData file (assetData.jar)");
             }
 
+            FileSummaryInfo = contentsSummary.FileSummaryInfo;
+
             LastCompiled = GetLastCompiled();
 
 
             HasVerbs = contentsSummary.HasVerbs;
 
-            RetrieveAddonSignatureInfo();
+            HasCuttingRoomAssets = contentsSummary.HasCuttingRoomAssets;
+
+            try
+            {
+                RetrieveAddonSignatureInfo();
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine(exception.Message);
+            }
 
             try
             {
@@ -429,9 +477,9 @@ namespace MSAddonLib.Domain.Addon
 
             HasStateMachine = contentsSummary.HasStateMachine;
 
+            string errorText;
             if (HasVerbs || HasStateMachine)
             {
-                string errorText;
                 VerbsSummary = new VerbsSummary(Source, pProcessingFlags.HasFlag(ProcessingFlags.ListCompactDupVerbsByName));
 
                 if (!(_verbSummaryPopulationOk = VerbsSummary.PopulateSummary(out errorText)))
@@ -440,9 +488,18 @@ namespace MSAddonLib.Domain.Addon
                 }
             }
 
+            if (HasCuttingRoomAssets)
+            {
+                CuttingRoomAssetsSummary = new CuttingRoomAssetsSummary(Source);
+                if (!CuttingRoomAssetsSummary.PopulateSummary(out errorText))
+                {
+                    _issuesStringBuilder.AppendLine($"CuttingRoomAssetsSummary: {errorText}");
+                }
+            }
+
             Sounds = GetSounds(contentsSummary.SoundFiles);
 
-            Filters = GetFilters(contentsSummary.FilterFiles);
+            // Filters = GetFilters(contentsSummary.FilterFiles);
 
             SpecialEffects = GetSpecialEffects(contentsSummary.SpecialEffects);
 
@@ -450,8 +507,98 @@ namespace MSAddonLib.Domain.Addon
 
             SkyTextures = GetSkies(contentsSummary.SkyFiles);
 
+            OtherAssets = contentsSummary.OtherAssets;
+
+            Issues = _issuesStringBuilder.ToString()?.Trim();
+
+            UpdateAssetSummary();
+
+            FingerPrint = CalculateFingerPrint(contentsSummary.FingerPrintData);
+
+            GeneratedDateTime = DateTime.Now;
+
             return true;
         }
+
+
+
+        public void UpdateAssetSummary()
+        {
+            AssetSummary = new AddonAssetSummary();
+
+            if ((BodyModelsSummary?.Puppets?.Puppets?.Count ?? 0) > 0)
+            {
+                foreach (BodyModelSumPuppet puppet in BodyModelsSummary.Puppets.Puppets)
+                {
+                    AssetSummary.Bodyparts += puppet.BodyParts?.Count ?? 0;
+                    AssetSummary.Decals += puppet.Decals?.Count ?? 0;
+                }
+            }
+
+            AssetSummary.Animations = UpdateAnimationsCount();
+
+            if (PropModelsSummary?.Props?.Props != null)
+            { 
+                AssetSummary.Props = PropModelsSummary.Props.Props.Count;
+                int variants = 0;
+                foreach (PropModelSumProp prop in PropModelsSummary.Props.Props)
+                {
+                    if (prop.Variants == null)
+                        variants++;
+                    else
+                        variants += prop.Variants.Count;
+                }
+                AssetSummary.PropVariants = variants;
+            }
+
+            AssetSummary.Verbs =
+                (VerbsSummary?.Verbs?.Gaits?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.Gestures?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.PuppetSoloVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.PuppetMutualVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.PropSoloVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.HeldPropsVerbs?.Count ?? 0)
+                + (VerbsSummary?.Verbs?.InteractivePropsVerbs?.Count ?? 0);
+
+            AssetSummary.CuttingRoomAssets =
+                (CuttingRoomAssetsSummary?.Assets?.Filters?.Count ?? 0)
+                + (CuttingRoomAssetsSummary?.Assets?.TextStyles?.Count ?? 0)
+                + (CuttingRoomAssetsSummary?.Assets?.Transitions?.Count ?? 0);
+            
+            AssetSummary.Sounds = Sounds?.Count ?? 0;
+            AssetSummary.SpecialEffects = SpecialEffects?.Count ?? 0;
+            AssetSummary.Materials = Materials?.Count ?? 0;
+            AssetSummary.SkyTextures = SkyTextures?.Count ?? 0;
+            AssetSummary.OtherAssets = OtherAssets?.Count ?? 0;
+
+            AssetSummary.Stocks = StockAssets?.Count ?? 0;
+            AssetSummary.StartMovies = DemoMovies?.Count ?? 0;
+        }
+
+        private int UpdateAnimationsCount()
+        {
+            if (AssetManifest == null)
+                return 0;
+
+            int count = 0;
+            if ((AssetManifest.BodyModels != null) && (AssetManifest.BodyModels.Count > 0))
+            {
+                foreach (BodyModelItem puppet in AssetManifest.BodyModels)
+                {
+                    count += puppet.Animations?.Count ?? 0;
+                }
+            }
+            if ((AssetManifest.PropModels != null) && (AssetManifest.PropModels.Count > 0))
+            {
+                foreach (PropModelItem prop in AssetManifest.PropModels)
+                {
+                    count += prop.Animations?.Count ?? 0;
+                }
+            }
+
+            return count;
+        }
+
 
         private DateTime? GetLastCompiled()
         {
@@ -466,9 +613,10 @@ namespace MSAddonLib.Domain.Addon
                 FileInfo fileInfo = new FileInfo(Path.Combine(Source.SourcePath, SignatureFilename));
                 return fileInfo?.LastWriteTime;
             }
-            catch
+            catch (Exception exception)
             {
-
+                _issuesStringBuilder.AppendLine(
+                    $"ERROR while getting datetime of last compilation: {exception.Message}");
             }
 
             return null;
@@ -480,19 +628,34 @@ namespace MSAddonLib.Domain.Addon
         {
             CheckContentsInFileResult result = new CheckContentsInFileResult();
 
+            result.FileSummaryInfo = new AddonFileSummaryInfo();
+            result.FileSummaryInfo.TotalFiles = pFileList.Count;
+            result.FingerPrintData = new List<string>();
+
             foreach (ArchiveFileInfo item in pFileList)
             {
                 string filename = item.FileName.ToLower();
-
+                
                 if (filename == ".addon")
                 {
                     result.HasAddonSignatureFile = true;
+                    result.FileSummaryInfo.SignatureFile = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
                     continue;
                 }
 
                 if (filename == "assetdata.jar")
                 {
                     result.HasAssetDataFile = true;
+                    result.FileSummaryInfo.ManifestArchive = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
+                    result.FingerPrintData.Add($"{filename}:{item.Size}:{item.LastWriteTime:s}^");
                     continue;
                 }
 
@@ -514,17 +677,38 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
+                if (filename == "meshdata.data")
+                {
+                    result.FingerPrintData.Add($"{filename}:{item.Size}:{item.LastWriteTime:s}^");
+                    continue;
+                }
+
                 if (!result.HasDataContents && filename.StartsWith("data\\") && !filename.EndsWith("data\\"))
                     result.HasDataContents = true;
+
+                if (filename.StartsWith("data\\") && !item.IsDirectory)
+                {
+                    result.FingerPrintData.Add($"{filename}:{item.Size}:{item.LastWriteTime:s}^");
+                }
 
                 if (filename.EndsWith("verbs"))
                 {
                     result.HasVerbs = true;
+                    result.FileSummaryInfo.VerbFile = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
                     continue;
                 }
                 if (filename.EndsWith("statemachine"))
                 {
                     result.HasStateMachine = true;
+                    result.FileSummaryInfo.StateMachineFile = new AddonFileInfo()
+                    {
+                        LastModified = item.LastWriteTime,
+                        Size = item.Size
+                    };
                     continue;
                 }
 
@@ -551,12 +735,18 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filename.StartsWith(@"stock\"))
+                if (filename.StartsWith(@"stock\") && filename.EndsWith(@"\object.xml"))
                 {
                     string[] parts = item.FileName.Split("\\".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length > 1)
                     {
-                        string stockName = parts[1];
+                        string stockText = Source.Archiver.ExtractArchivedFileToString(item.FileName)?.ToLower();
+                        string stockSubtype = "";
+                        if (stockText?.StartsWith("<set>") ?? false)
+                            stockSubtype = "Set:";
+                        else if (stockText?.StartsWith("<character>") ?? false)
+                            stockSubtype = "Character:";
+                        string stockName = $"{stockSubtype}{parts[1]}";
                         if (!string.IsNullOrEmpty(stockName))
                         {
                             if (result.StockAssets == null)
@@ -587,13 +777,9 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filename.StartsWith("data\\cuttingroom\\filters\\") && !item.IsDirectory)
+                if (!result.HasCuttingRoomAssets && filename.StartsWith("data\\cuttingroom") && filename.EndsWith("object.dat"))
                 {
-                    string path = Path.GetDirectoryName(item.FileName);
-                    if (result.FilterFiles == null)
-                        result.FilterFiles = new List<string>();
-                    if (!result.FilterFiles.Contains(path))
-                        result.FilterFiles.Add(path);
+                    result.HasCuttingRoomAssets = true;
                     continue;
                 }
 
@@ -620,6 +806,23 @@ namespace MSAddonLib.Domain.Addon
                     result.SpecialEffects.Add(item.FileName);
                 }
 
+                if (filename.StartsWith("data\\terrain_masks") && filename.EndsWith(".png"))
+                {
+                    if(result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    result.OtherAssets.Add("TerrainMask:" + Path.GetFileNameWithoutExtension(item.FileName));
+                }
+
+                if (filename.StartsWith("data\\scenario\\"))
+                {
+                    string scenarioName = GetScenarioName(item.FileName);
+
+                    if (result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    if (!result.OtherAssets.Contains(scenarioName))
+                        result.OtherAssets.Add(scenarioName);
+                }
+
             }
 
             return result;
@@ -629,16 +832,23 @@ namespace MSAddonLib.Domain.Addon
         private CheckContentsInFileResult CheckContentsInFileList(string pRootPath)
         {
             CheckContentsInFileResult result = new CheckContentsInFileResult();
+            result.FileSummaryInfo = new AddonFileSummaryInfo();
+            result.FingerPrintData = new List<string>();
 
             string prefix = pRootPath.ToLower();
             if (!prefix.EndsWith("\\"))
                 prefix += "\\";
             int prefixLen = prefix.Length;
 
-            foreach (string fileName in Directory.EnumerateFiles(pRootPath, "*", SearchOption.AllDirectories))
+            List<string> addonFiles = Directory.EnumerateFiles(pRootPath, "*", SearchOption.AllDirectories).ToList();
+            result.FileSummaryInfo.TotalFiles = addonFiles.Count;
+
+            foreach (string fileName in addonFiles)
             {
                 string relativePath = fileName;
                 string filenameLower = fileName.ToLower();
+                ulong fileSize;
+                DateTime fileLastWriteTime;
                 if (filenameLower.StartsWith(prefix))
                 {
                     filenameLower = filenameLower.Remove(0, prefixLen);
@@ -649,12 +859,16 @@ namespace MSAddonLib.Domain.Addon
                 if (filenameLower == ".addon")
                 {
                     result.HasAddonSignatureFile = true;
+                    result.FileSummaryInfo.SignatureFile = GetFileSummaryInfo(pRootPath, fileName);
                     continue;
                 }
 
                 if (filenameLower == "assetdata.jar")
                 {
                     result.HasAssetDataFile = true;
+                    result.FileSummaryInfo.ManifestArchive = GetFileSummaryInfo(pRootPath, fileName);
+                    GetFileData(fileName, out fileSize, out fileLastWriteTime);
+                    result.FingerPrintData.Add($"{filenameLower}:{fileSize}:{fileLastWriteTime:s}^");
                     continue;
                 }
 
@@ -676,17 +890,33 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
+                if (filenameLower == "meshdata.data")
+                {
+                    GetFileData(fileName, out fileSize, out fileLastWriteTime);
+                    result.FingerPrintData.Add($"{filenameLower}:{fileSize}:{fileLastWriteTime:s}^");
+                    continue;
+                }
+
                 if (!result.HasDataContents && filenameLower.StartsWith("data\\") && !filenameLower.EndsWith("data\\"))
                     result.HasDataContents = true;
+
+
+                if (filenameLower.StartsWith("data\\"))
+                {
+                    GetFileData(fileName, out fileSize, out fileLastWriteTime);
+                    result.FingerPrintData.Add($"{filenameLower}:{fileSize}:{fileLastWriteTime:s}^");
+                }
 
                 if (filenameLower.EndsWith("verbs"))
                 {
                     result.HasVerbs = true;
+                    result.FileSummaryInfo.VerbFile = GetFileSummaryInfo(pRootPath, fileName);
                     continue;
                 }
                 if (filenameLower.EndsWith("statemachine"))
                 {
                     result.HasStateMachine = true;
+                    result.FileSummaryInfo.StateMachineFile = GetFileSummaryInfo(pRootPath, fileName);
                     continue;
                 }
 
@@ -723,12 +953,18 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filenameLower.StartsWith(@"stock\"))
+                if (filenameLower.StartsWith(@"stock\") && filenameLower.EndsWith(@"\object.xml"))
                 {
                     string[] parts = relativePath.Split("\\".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length > 1)
                     {
-                        string stockName = parts[1];
+                        string stockText = File.ReadAllText(Path.Combine(pRootPath, filenameLower))?.ToLower();
+                        string stockSubtype = "";
+                        if (stockText?.StartsWith("<set>") ?? false)
+                            stockSubtype = "Set:";
+                        else if (stockText?.StartsWith("<character>") ?? false)
+                            stockSubtype = "Character:";
+                        string stockName = $"{stockSubtype}{parts[1]}";
                         if (!string.IsNullOrEmpty(stockName))
                         {
                             if (result.StockAssets == null)
@@ -759,13 +995,9 @@ namespace MSAddonLib.Domain.Addon
                     continue;
                 }
 
-                if (filenameLower.StartsWith("data\\cuttingroom\\filters\\") /* && !fileName.IsDirectory */)
+                if (!result.HasCuttingRoomAssets && filenameLower.StartsWith("data\\cuttingroom") && filenameLower.EndsWith("object.dat"))
                 {
-                    string path = Path.GetDirectoryName(relativePath);
-                    if (result.FilterFiles == null)
-                        result.FilterFiles = new List<string>();
-                    if (!result.FilterFiles.Contains(path))
-                        result.FilterFiles.Add(path);
+                    result.HasCuttingRoomAssets = true;
                     continue;
                 }
 
@@ -792,9 +1024,88 @@ namespace MSAddonLib.Domain.Addon
                     result.SpecialEffects.Add(relativePath);
                 }
 
+                if (filenameLower.StartsWith("data\\terrain_masks") && filenameLower.EndsWith(".png"))
+                {
+                    if (result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    result.OtherAssets.Add("TerrainMask:" + Path.GetFileNameWithoutExtension(relativePath));
+                }
+
+                if (filenameLower.StartsWith("data\\scenario\\"))
+                {
+                    string scenarioName = GetScenarioName(relativePath);
+
+                    if (result.OtherAssets == null)
+                        result.OtherAssets = new List<string>();
+                    if(!result.OtherAssets.Contains(scenarioName))
+                        result.OtherAssets.Add(scenarioName);
+                }
             }
 
             return result;
+        }
+
+        private void GetFileData(string pFileName, out ulong pFileSize, out DateTime pFileLastWriteTime)
+        {
+            FileInfo info = new FileInfo(pFileName);
+            pFileSize = (ulong) info.Length;
+            pFileLastWriteTime = info.LastWriteTime;
+        }
+
+
+        private string CalculateFingerPrint(List<string> pFingerPrintData)
+        {
+            pFingerPrintData.Sort();
+            
+            StringBuilder builder = new StringBuilder();
+            foreach (string line in pFingerPrintData)
+            {
+                builder.Append(line);
+            }
+
+            string fingerprintText = builder.ToString();
+            byte[] bytes = Encoding.UTF8.GetBytes(fingerprintText);
+
+            SHA256 sha256 = SHA256.Create();
+            byte[] hash = sha256.ComputeHash(bytes);
+
+            builder.Clear();
+            foreach (byte x in hash)
+            {
+                builder.Append($"{x:x2}");
+            }
+
+            return builder.ToString();
+        }
+        
+
+        private string GetScenarioName(string pPath)
+        {
+            string name = pPath.Remove(0, ScenarioPrefixLen);
+            int index = name.IndexOf("\\");
+
+            if(index >= 0)
+                name = name.Remove(index);
+
+            return $"Scenario:{name}";
+        }
+
+
+        private AddonFileInfo GetFileSummaryInfo(string pRootPath, string pFileName)
+        {
+            AddonFileInfo summaryFileInfo = null;
+            try
+            {
+                FileInfo info = new FileInfo(Path.Combine(pRootPath, pFileName));
+                summaryFileInfo = new AddonFileInfo()
+                {
+                    LastModified = info.LastWriteTime,
+                    Size = (ulong)info.Length
+                };
+            }
+            catch { }
+
+            return summaryFileInfo;
         }
 
 
@@ -835,7 +1146,7 @@ namespace MSAddonLib.Domain.Addon
                 case AddonPackageSourceType.Archiver:
                     addonSignatureFilename = GetArchivedFileFullName(SignatureFilename);
                     addonFileContents = Source.Archiver.ExtractArchivedFileToByte(addonSignatureFilename);
-                    if(addonFileContents == null)
+                    if (addonFileContents == null)
                         errorText = Source.Archiver.LastErrorText;
                     break;
                 case AddonPackageSourceType.Folder:
@@ -889,7 +1200,7 @@ namespace MSAddonLib.Domain.Addon
 
             string manifestContents = assetDataArchiver.ExtractArchivedFileToString(ManifestFilename, true);
 
-            if(deleteTempAssetDataFile)
+            if (deleteTempAssetDataFile)
                 File.Delete(assetDataFile);
             if (string.IsNullOrEmpty(manifestContents))
             {
@@ -952,6 +1263,11 @@ namespace MSAddonLib.Domain.Addon
             AddonVersionInfo addonVersionInfo = AddonVersionInfo.LoadFromString(versionFileContents, out errorText);
             if (addonVersionInfo != null)
                 Revision = addonVersionInfo.Revision;
+            else
+            {
+                if (errorText != null)
+                    _issuesStringBuilder.AppendLine(errorText);
+            }
         }
 
         // --------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1067,11 +1383,17 @@ namespace MSAddonLib.Domain.Addon
                 return null;
 
             List<string> skies = new List<string>();
-            foreach (string item in pSkyFiles)
+            try
             {
-                skies.Add(item.Remove(0, "Data\\Sky\\".Length));
+                foreach (string item in pSkyFiles)
+                {
+                    skies.Add(item.Remove(0, "Data\\Sky\\".Length));
+                }
             }
-
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Sky Textures: {exception.Message}");
+            }
             return skies;
         }
 
@@ -1082,28 +1404,43 @@ namespace MSAddonLib.Domain.Addon
                 return null;
 
             List<string> sounds = new List<string>();
-            foreach (string item in pSoundFiles)
+            try
             {
-                sounds.Add(item.Remove(0, "Data\\Sound\\".Length).Replace("\\", "/"));
+                foreach (string item in pSoundFiles)
+                {
+                    sounds.Add(item.Remove(0, "Data\\Sound\\".Length).Replace("\\", "/"));
+                }
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Sounds: {exception.Message}");
             }
 
             return sounds;
         }
 
+        /*
         private List<string> GetFilters(List<string> pFilterFiles)
         {
             if ((pFilterFiles == null) || (pFilterFiles.Count == 0))
                 return null;
 
             List<string> filters = new List<string>();
-            foreach (string item in pFilterFiles)
+            try
             {
-                filters.Add(item.Remove(0, "Data/CuttingRoom/Filters/".Length).Replace("\\", "/"));
+                foreach (string item in pFilterFiles)
+                {
+                    filters.Add(item.Remove(0, "Data/CuttingRoom/Filters/".Length).Replace("\\", "/"));
+                }
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Filters: {exception.Message}");
             }
 
             return filters;
         }
-
+        */
 
 
         private List<string> GetSpecialEffects(List<string> pSpecialEffects)
@@ -1112,11 +1449,17 @@ namespace MSAddonLib.Domain.Addon
                 return null;
 
             List<string> specialEffects = new List<string>();
-            foreach (string item in pSpecialEffects)
+            try
             {
-                specialEffects.Add(item.Replace("Data\\", "").Replace("\\", "/").Replace(".mps", ""));
+                foreach (string item in pSpecialEffects)
+                {
+                    specialEffects.Add(item.Replace("Data\\", "").Replace("\\", "/").Replace(".mps", ""));
+                }
             }
-
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting SFX: {exception.Message}");
+            }
             return specialEffects;
         }
 
@@ -1125,22 +1468,29 @@ namespace MSAddonLib.Domain.Addon
 
         private double? GetMeshDataSize()
         {
-            switch (Source.SourceType)
+            try
             {
-                case AddonPackageSourceType.Archiver:
-                    foreach (ArchiveFileInfo file in _addonFileList)
-                    {
-                        if (file.FileName.ToLower() == MeshDataFilename.ToLower())
+                switch (Source.SourceType)
+                {
+                    case AddonPackageSourceType.Archiver:
+                        foreach (ArchiveFileInfo file in _addonFileList)
                         {
-                            return file.Size / BytesPerMegabyte;
+                            if (file.FileName.ToLower() == MeshDataFilename.ToLower())
+                            {
+                                return file.Size / BytesPerMegabyte;
+                            }
                         }
-                    }
-                    break;
-                case AddonPackageSourceType.Folder:
-                    string meshDataFile = Path.Combine(Source.SourcePath, MeshDataFilename);
-                    if (File.Exists(meshDataFile))
-                        return new FileInfo(meshDataFile).Length / BytesPerMegabyte;
-                    break;
+                        break;
+                    case AddonPackageSourceType.Folder:
+                        string meshDataFile = Path.Combine(Source.SourcePath, MeshDataFilename);
+                        if (File.Exists(meshDataFile))
+                            return new FileInfo(meshDataFile).Length / BytesPerMegabyte;
+                        break;
+                }
+            }
+            catch (Exception exception)
+            {
+                _issuesStringBuilder.AppendLine($"Error while getting Mesh Data Size: {exception.Message}");
             }
 
             return null;
@@ -1158,11 +1508,18 @@ namespace MSAddonLib.Domain.Addon
 
             StringBuilder summary = new StringBuilder();
             summary.AppendLine(string.Format("    Name: {0}", Name));
+            if (HasIssues)
+            {
+                summary.AppendLine("   !Has Problems - refer to the end of the report...");
+            }
+
             // summary.AppendLine(string.Format("FriendlyName: {0}", _friendlyName));
             summary.AppendLine(string.Format("    Publisher: {0}", Publisher));
             summary.AppendLine(string.Format("    Free: {0}", Free));
-            if(LastCompiled.HasValue)
+            if (LastCompiled.HasValue)
                 summary.AppendLine(string.Format($"    Last compiled: {LastCompiled.Value:u}"));
+            if (FileSummaryInfo != null)
+                summary.AppendLine($"    Total files: {FileSummaryInfo.TotalFiles}");
             if (!string.IsNullOrEmpty(Description))
             {
                 bool firstLine = true;
@@ -1205,8 +1562,12 @@ namespace MSAddonLib.Domain.Addon
                     }
                 }
             }
-            if(!string.IsNullOrEmpty(Revision))
+            if (!string.IsNullOrEmpty(Revision))
                 summary.AppendLine(string.Format("    Revision: {0}", Revision));
+
+            if (!string.IsNullOrEmpty(FingerPrint))
+                summary.AppendLine($"    * Fingerprint: {FingerPrint}");
+            
             // summary.AppendLine(string.Format("Path: {0}", _addonPath));
             if (MeshDataSizeMbytes.HasValue && (MeshDataSizeMbytes.Value > 0))
             {
@@ -1218,14 +1579,14 @@ namespace MSAddonLib.Domain.Addon
                 summary.AppendLine("    No meshes");
             if (HasThumbnail)
                 summary.AppendLine("    Has Thumbnail image");
-            if (DemoMovies != null)
+            if ((DemoMovies != null) && (DemoMovies.Count > 0))
             {
                 summary.AppendLine("    * Includes Demo Movies:");
                 foreach (string item in DemoMovies)
                     summary.AppendLine($"         '{item}'");
             }
 
-            if (StockAssets != null)
+            if ((StockAssets != null) && (StockAssets.Count > 0))
             {
                 summary.AppendLine("    * Includes Stock assets:");
                 foreach (string item in StockAssets)
@@ -1290,13 +1651,35 @@ namespace MSAddonLib.Domain.Addon
 
             AppendMiscList(summary, Sounds, "Sounds");
 
-            AppendMiscList(summary, Filters, "Filters");
+            if (HasCuttingRoomAssets && CuttingRoomAssetsSummary.HasData)
+            {
+                string text = CuttingRoomAssetsSummary.ToString();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    summary.AppendLine("    Cutting Room Assets:");
+                    foreach (string line in text.Split("\n".ToCharArray()))
+                    {
+                        if (!string.IsNullOrEmpty(line.Trim()))
+                            summary.AppendLine($"      {line}");
+                    }
+                }
+            }
+            // AppendMiscList(summary, Filters, "Filters");
 
             AppendMiscList(summary, SpecialEffects, "Special Effects");
 
             AppendMiscList(summary, Materials, "Materials");
 
             AppendMiscList(summary, SkyTextures, "Sky Textures");
+
+            AppendMiscList(summary, OtherAssets, "Other Assets");
+
+            if (HasIssues)
+            {
+                summary.AppendLine("    !PROBLEMS:");
+                foreach (string line in Issues.Split("\n".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
+                    summary.AppendLine($"        {line}");
+            }
 
             return (ReportText = summary.ToString());
         }
@@ -1328,6 +1711,60 @@ namespace MSAddonLib.Domain.Addon
     }
 
 
+    public class AddonAssetSummary
+    {
+        public int Bodyparts { get; set; }
+
+        public int Decals { get; set; }
+
+        public int Props { get; set; }
+
+        public int PropVariants { get; set; }
+
+        public int Animations { get; set; }
+
+        public int Verbs { get; set; }
+
+        public int Sounds { get; set; }
+
+        public int CuttingRoomAssets { get; set; }
+
+        public int SpecialEffects { get; set; }
+
+        public int Materials { get; set; }
+
+        public int SkyTextures { get; set; }
+
+        public int OtherAssets { get; set; }
+
+        public int Stocks { get; set; }
+
+        public int StartMovies { get; set; }
+    }
+
+
+    public sealed class AddonFileSummaryInfo
+    {
+        public int TotalFiles { get; set; }
+
+        public AddonFileInfo SignatureFile { get; set; }
+
+        public AddonFileInfo ManifestArchive { get; set; }
+
+        public AddonFileInfo StateMachineFile { get; set; }
+
+        public AddonFileInfo VerbFile { get; set; }
+    }
+
+
+    public sealed class AddonFileInfo
+    {
+        public ulong Size { get; set; }
+
+        public DateTime LastModified { get; set; }
+    }
+
+
     sealed class CheckContentsInFileResult
     {
         public bool HasAddonSignatureFile { get; set; }
@@ -1350,6 +1787,8 @@ namespace MSAddonLib.Domain.Addon
 
         public bool HasVerbs { get; set; }
 
+        public bool HasCuttingRoomAssets { get; set; }
+
         public bool HasCal3DMeshFiles { get; set; }
 
         public List<string> MaterialsFiles { get; set; }
@@ -1357,8 +1796,16 @@ namespace MSAddonLib.Domain.Addon
         public List<string> SkyFiles { get; set; }
         // public List<string> PropAnimations { get; set; }
         public List<string> SoundFiles { get; set; }
-        public List<string> FilterFiles { get; set; }
+
+        // public List<string> FilterFiles { get; set; }
+
         public List<string> SpecialEffects { get; set; }
+
+        public List<string> OtherAssets { get; set; }
+
+        public AddonFileSummaryInfo FileSummaryInfo { get; set; }
+
+        public List<string> FingerPrintData { get; set; }
     }
 
 }

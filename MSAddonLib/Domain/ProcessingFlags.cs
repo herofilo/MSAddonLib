@@ -13,6 +13,9 @@ namespace MSAddonLib.Domain
         ListWeirdGestureGaitsVerbs = 0x0010,
         ListCompactDupVerbsByName = 0x0020,
         CorrectDisguisedFiles = 0x1000,
-        CorrectDisguisedFilesDeleteSource = 0x2000
+        CorrectDisguisedFilesDeleteSource = 0x2000,
+        AppendToAddonPackageSet = 0x4000,
+        AppendToAddonPackageSetForceRefresh = 0x8000,
+        FolderTopOnlySearch = 0x10000
     }
 }

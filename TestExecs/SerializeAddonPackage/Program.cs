@@ -7,6 +7,7 @@ using System.Text;
 using System.Xml.Serialization;
 using MSAddonLib.Domain;
 using MSAddonLib.Domain.Addon;
+using MSAddonLib.Persistence.AddonDB;
 using MSAddonLib.Util;
 
 namespace SerializeAddonPackage
@@ -43,9 +44,11 @@ namespace SerializeAddonPackage
         {
 
             AddonPackage package = new AddonPackage(@"C:\Program Files (x86)\Moviestorm\AddOn\1AD", ProcessingFlags.ListCompactDupVerbsByName);
-
-
-
+            /*
+            if (pProcessingFlags.HasFlag(ProcessingFlags.AppendToAddonPackageSet) && (AddonPackageSet != null) &&
+                (package != null) && (!package.HasIssues))
+                AddonPackageSet.Append(package, true);
+                */
             string errorText = null;
 
 

@@ -760,7 +760,7 @@ namespace MSAddonLib.Domain.Addon
 
         public string WriteReport(bool pListWeirdGestureGaits)
         {
-            if (!_initialized || (Verbs == null) || !Verbs.HasData)
+            if ((Verbs == null) || !Verbs.HasData)
                 return "";
 
             StringBuilder textBuilder = new StringBuilder();

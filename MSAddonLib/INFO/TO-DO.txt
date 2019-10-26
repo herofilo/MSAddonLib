@@ -1,4 +1,5 @@
 
 MSAddonLib - TO-DO
 -----------------------
-
+* Report BodyParts (=> MSAddonLib)
+	Decals Referred count (not in Addon) (BodyModelSumPuppet.DecalsReferenced)

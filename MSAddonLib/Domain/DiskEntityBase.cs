@@ -2,6 +2,7 @@
 using System.IO;
 using MSAddonLib.Domain.Addon;
 using MSAddonLib.Persistence;
+using MSAddonLib.Persistence.AddonDB;
 
 namespace MSAddonLib.Domain
 {
@@ -9,6 +10,8 @@ namespace MSAddonLib.Domain
     {
 
         public const string ErrorTokenString = "#!?";
+
+        public static AddonPackageSet AddonPackageSet { get; set; }
 
         public DiskEntityType DiskEntityType { get; protected set; } = DiskEntityType.Unknown;
 
@@ -19,14 +22,16 @@ namespace MSAddonLib.Domain
 
         public string Name { get; protected set; }
 
-        public bool InsideArchive { get; protected set; }
+        public bool InsideArchive => ArchivedPath != null;
+
+        public string ArchivedPath { get; protected set; }
 
         protected IReportWriter ReportWriter = null;
 
 
         // -----------------------------------------------------------------------------------------
 
-        public DiskEntityBase(string pEntityPath, bool pInsideArchive, IReportWriter pReportWriter)
+        public DiskEntityBase(string pEntityPath, string pArchivedPath, IReportWriter pReportWriter)
         {
             string absolutePath, name;
             DiskEntityType = GetEntityType(pEntityPath, out absolutePath, out name);
@@ -37,7 +42,7 @@ namespace MSAddonLib.Domain
                 Name = name;
             }
 
-            InsideArchive = pInsideArchive;
+            ArchivedPath = pArchivedPath;
             ReportWriter = pReportWriter ?? new NullReportWriter();
         }
 

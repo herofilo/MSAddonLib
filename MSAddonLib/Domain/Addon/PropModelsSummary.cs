@@ -162,7 +162,7 @@ namespace MSAddonLib.Domain.Addon
 
         public override string ToString()
         {
-            if (!_initialized || (Props == null) || (Props?.Props.Count == 0))
+            if ((Props == null) || (Props?.Props.Count == 0))
                 return "";
 
 
@@ -178,7 +178,7 @@ namespace MSAddonLib.Domain.Addon
                 if (prop.MultiPart)
                     propName += " [Multipart]";
                 textBuilder.AppendLine($"{propName}");
-                if (prop.Variants != null)
+                if ((prop.Variants != null) && (prop.Variants.Count > 1))
                 {
                     textBuilder.AppendLine($"    Variants (default: {prop.DefaultVariant}):");
                     foreach (string variant in prop.Variants)
@@ -189,7 +189,7 @@ namespace MSAddonLib.Domain.Addon
                     textBuilder.AppendLine($"    Autoanimation: {prop.AutoAnimation}");
                 else
                 {
-                    if (prop.Animations != null)
+                    if ((prop.Animations != null) && (prop.Animations.Count > 0))
                     {
                         if (LoadAnimations)
                         {

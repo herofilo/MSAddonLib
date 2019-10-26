@@ -34,7 +34,7 @@ namespace TestRun
             Console.WriteLine($"Entity Path: {_diskEntity}");
 
             StringReportWriter writer = new StringReportWriter();
-            IDiskEntity entity = DiskEntityHelper.GetEntity(_diskEntity, false, writer);
+            IDiskEntity entity = DiskEntityHelper.GetEntity(_diskEntity, null, writer);
             Console.WriteLine($"Entity Type: {entity.DiskEntityType}");
 
             bool result = entity.CheckEntity(_processingFlags);

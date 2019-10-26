@@ -30,6 +30,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>ExceptionRaisedSoft.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="SevenZipSharp, Version=0.64.3890.29348, Culture=neutral, PublicKeyToken=20de82c62b055c88, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -54,11 +60,13 @@
     <Compile Include="Domain\Addon\BodyModelItem.cs" />
     <Compile Include="Domain\Addon\BodyModelsSummary.cs" />
     <Compile Include="Domain\Addon\BodyPart.cs" />
+    <Compile Include="Domain\Addon\CuttingRoomAssetsSummary.cs" />
     <Compile Include="Domain\Addon\ModelPart.cs" />
     <Compile Include="Domain\Addon\PropModelItem.cs" />
     <Compile Include="Domain\Addon\PropModelsSummary.cs" />
     <Compile Include="Domain\Addon\Template.cs" />
     <Compile Include="Domain\Addon\VerbsSummary.cs" />
+    <Compile Include="Domain\AssetFiles\AssetInfo.cs" />
     <Compile Include="Domain\DiskEntityAddon.cs" />
     <Compile Include="Domain\DiskEntityAddonFolder.cs" />
     <Compile Include="Domain\DiskEntityArchive.cs" />
@@ -75,6 +83,13 @@
     <Compile Include="Domain\DiskEntityType.cs" />
     <Compile Include="Domain\IDiskEntity.cs" />
     <Compile Include="Domain\ProcessingFlags.cs" />
+    <Compile Include="Persistence\AddonDB\AddonAssetType.cs" />
+    <Compile Include="Persistence\AddonDB\AddonPackageSet.cs" />
+    <Compile Include="Persistence\AddonDB\AddonSearchCriteria.cs" />
+    <Compile Include="Persistence\AddonDB\AssetSearchCriteria.cs" />
+    <Compile Include="Persistence\AddonDB\AssetSearchResultItem.cs" />
+    <Compile Include="Persistence\AddonDB\SearchCriteriaBase.cs" />
+    <Compile Include="Persistence\AddonDB\SearchStatistics.cs" />
     <Compile Include="Persistence\FormReportWriter.cs" />
     <Compile Include="Persistence\IReportWriter.cs" />
     <Compile Include="Persistence\NullReportWriter.cs" />
@@ -85,7 +100,6 @@
     <Compile Include="Util\Persistence\SevenZipArchiver.cs" />
     <Compile Include="Util\Utils.cs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <Content Include="7z.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -102,6 +116,9 @@
     <Content Include="SevenZipSharp.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ExceptionRaisedSoft.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

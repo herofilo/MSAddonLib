@@ -19,6 +19,8 @@ namespace MSAddonLib.Domain.Addon
 
         public string SourcePath { get; set; }
 
+        public string ArchivedPath { get; set; }
+
         // -----------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -28,13 +30,14 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
-        public AddonPackageSource(string pSourcePath)
+        public AddonPackageSource(string pSourcePath, string pArchivedPath = null)
         {
             if (string.IsNullOrEmpty(pSourcePath = pSourcePath.Trim()))
                 throw new Exception("Not a valid path specification");
 
             pSourcePath = Path.GetFullPath(pSourcePath);
 
+            ArchivedPath = pArchivedPath;
             if (Directory.Exists(pSourcePath))
             {
                 SourceType = AddonPackageSourceType.Folder;
@@ -58,7 +61,7 @@ namespace MSAddonLib.Domain.Addon
         }
 
 
-        public AddonPackageSource(SevenZipArchiver pArchiver)
+        public AddonPackageSource(SevenZipArchiver pArchiver, string pArchivedPath = null)
         {
             if (pArchiver == null)
                 throw new Exception("Not a valid Archiver specification");
@@ -67,6 +70,7 @@ namespace MSAddonLib.Domain.Addon
             SourceType = AddonPackageSourceType.Archiver;
             if (pArchiver.Source == SevenZipArchiverSource.File)
                 SourcePath = pArchiver.ArchiveName;
+            ArchivedPath = pArchivedPath;
         }
     }
 
