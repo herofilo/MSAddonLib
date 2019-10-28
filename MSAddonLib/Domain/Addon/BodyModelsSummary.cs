@@ -288,8 +288,12 @@ namespace MSAddonLib.Domain.Addon
                     if (!ListGestureGaitsAnimations)
                     {
                         int gestureAnimations = puppet.Animations?.Count ?? 0;
-                        textBuilder.AppendLine(
-                            $"    Animations: Gesture/Gaits: {gestureAnimations}   Other: {puppet.OtherAnimations} - See Verbs");
+                        if ((gestureAnimations > 0) || (puppet.OtherAnimations > 0))
+                        {
+                            textBuilder.AppendLine(
+                                $"    Animations: Gesture/Gaits: {gestureAnimations}   Other: {puppet.OtherAnimations} - See Verbs");
+                        }
+
                         continue;
                     }
 

@@ -350,6 +350,31 @@ namespace MSAddonLib.Util
         }
 
 
+        // -------------------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Prints a byte[] as hexadecimal string
+        /// </summary>
+        /// <param name="pBytes">Vector of bytes to print</param>
+        /// <param name="pUpperCase">Prints hexadecimal a-f in Uppercase</param>
+        /// <returns>Hexadecimal string</returns>
+        public static string HexaBinString(byte[] pBytes, bool pUpperCase = false)
+        {
+            if (pBytes == null)
+                return null;
+
+            StringBuilder builder = new StringBuilder();
+            
+            foreach (byte x in pBytes)
+            {
+                builder.Append($"{x:x2}");
+            }
+
+            string output = builder.ToString();
+
+            return pUpperCase ? output.ToUpper() : output;
+        }
+
 
         // -------------------------------------------------------------------------------------------------------
 

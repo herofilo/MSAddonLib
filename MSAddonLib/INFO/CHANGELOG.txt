@@ -1,6 +1,17 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.7.1 (20191027):
+	BodyModelsSummary.ToPrint(): if ((gestureAnimations == 0) && (puppet.OtherAnimations == 0)) don't print
+	Utils: new method HexaBinString()
+	AddonStrongHash: class computing a strong hash for the addon, from the contents of the relevant files in the addon, that is:
+		- Manifest archive
+		- Mesh data file
+		- Data files except:
+			Description of bodyparts: .bodypart
+			Description of props: DESCRIPTOR .template .part
+			Cal3D files: mesh material
+
 * v1.7.0 (20191019):
 	AddonPackage: new properties: 
 		Fingerprint

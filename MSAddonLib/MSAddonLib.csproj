@@ -97,6 +97,7 @@
     <Compile Include="Persistence\StringReportWriter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Util\Persistence\AddonPersistenceUtils.cs" />
+    <Compile Include="Util\Persistence\AddonStrongHash.cs" />
     <Compile Include="Util\Persistence\SevenZipArchiver.cs" />
     <Compile Include="Util\Utils.cs" />
   </ItemGroup>

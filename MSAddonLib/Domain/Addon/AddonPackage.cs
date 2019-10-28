@@ -1069,13 +1069,7 @@ namespace MSAddonLib.Domain.Addon
             SHA256 sha256 = SHA256.Create();
             byte[] hash = sha256.ComputeHash(bytes);
 
-            builder.Clear();
-            foreach (byte x in hash)
-            {
-                builder.Append($"{x:x2}");
-            }
-
-            return builder.ToString();
+            return Utils.HexaBinString(hash);
         }
         
 
