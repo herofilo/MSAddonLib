@@ -32,7 +32,7 @@ namespace MSAddonLib.Util.Persistence
         {
             pErrorText = null;
             string hash = null;
-
+            string fileNameLower = null;
             try
             {
                 string prefix = pRootFolder.ToLower() + "\\";
@@ -41,7 +41,7 @@ namespace MSAddonLib.Util.Persistence
 
                 foreach (string fileName in Directory.EnumerateFiles(pRootFolder, "*", SearchOption.AllDirectories))
                 {
-                    string fileNameLower = fileName.ToLower().Replace(prefix, "");
+                    fileNameLower = fileName.ToLower().Replace(prefix, "");
                     if ((fileNameLower == "assetdata.jar") || (fileNameLower == "meshdata.data"))
                     {
                         fileData.Add($"{fileNameLower}^{ComputeFileHash(fileName)}|");
@@ -62,14 +62,19 @@ namespace MSAddonLib.Util.Persistence
             }
             catch (Exception exception)
             {
-                pErrorText = $"GetStrongHashFolder(): EXCEPTION: {exception.Message}";
+                pErrorText = $"GetStrongHashFolder():: [{fileNameLower}]\n  EXCEPTION: {exception.Message}\n{exception.StackTrace}";
             }
 
             return hash;
         }
 
+
         private static string ComputeFileHash(string pFileName)
         {
+            FileInfo info = new FileInfo(pFileName);
+            if (info.Length == 0)
+                return "#ZERO-LENGTH";
+
             byte[] hash;
             using (FileStream stream = File.OpenRead(pFileName))
             {
@@ -108,7 +113,7 @@ namespace MSAddonLib.Util.Persistence
                 return null;
 
             string hash = null;
-
+            string fileNameLower = null;
             try
             {
                 SevenZipArchiver archiver = new SevenZipArchiver(pAddonFile);
@@ -122,12 +127,12 @@ namespace MSAddonLib.Util.Persistence
                 {
                     if (item.IsDirectory)
                         continue;
-                    string fileNameLower = item.FileName.ToLower();
+                    fileNameLower = item.FileName.ToLower();
 
                     if ((fileNameLower == "assetdata.jar") || (fileNameLower == "meshdata.data"))
                     {
                         fileData.Add(
-                            $"{fileNameLower}^{ComputeArchivedFileHash(archiver, item.FileName)}");
+                            $"{fileNameLower}^{ComputeArchivedFileHash(archiver, item)}");
                         continue;
                     }
 
@@ -139,24 +144,27 @@ namespace MSAddonLib.Util.Persistence
                         (extension == ".part") || (extension == ".cmf") || (extension == ".crf"))
                         continue;
                     fileData.Add(
-                        $"{fileNameLower}^{ComputeArchivedFileHash(archiver, item.FileName)}");
+                        $"{fileNameLower}^{ComputeArchivedFileHash(archiver, item)}");
                 }
 
                 hash = CalcStrongHash(fileData);
             }
             catch (Exception exception)
             {
-                pErrorText = $"GetStrongHashFolder(): EXCEPTION: {exception.Message}";
+                pErrorText = $"GetStrongHashFile(): [{fileNameLower}]\n  EXCEPTION: {exception.Message}\n{exception.StackTrace}";
             }
 
             return hash;
         }
 
 
-        private static string ComputeArchivedFileHash(SevenZipArchiver pArchiver, string pFileName)
+        private static string ComputeArchivedFileHash(SevenZipArchiver pArchiver, ArchiveFileInfo pFile)
         {
+            if(pFile.Size == 0)
+                return "#ZERO-LENGTH";
+            
             byte[] hash;
-            using (Stream stream = pArchiver.ExtractArchivedFileToStream(pFileName))
+            using (Stream stream = pArchiver.ExtractArchivedFileToStream(pFile.FileName))
             {
                 SHA512Cng sha512 = new SHA512Cng();
                 hash = sha512.ComputeHash(stream);
