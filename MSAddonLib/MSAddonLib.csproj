@@ -51,6 +51,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Domain\Addon\AddonNotes.cs" />
     <Compile Include="Domain\Addon\AddonPackage.cs" />
     <Compile Include="Domain\Addon\AddonPackageSource.cs" />
     <Compile Include="Domain\Addon\AddonPropertiesInfo.cs" />

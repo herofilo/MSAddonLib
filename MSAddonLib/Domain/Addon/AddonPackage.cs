@@ -54,6 +54,11 @@ namespace MSAddonLib.Domain.Addon
         public const string PropertiesFilename = ".properties";
 
         /// <summary>
+        /// Name of the unofficial notes file
+        /// </summary>
+        public const string NotesFilename = "notes.txt";
+
+        /// <summary>
         /// Name of the mesh data file of the addon. It contains the meshes for all the props and body parts in the addon, in a compact (and possibly encrypted) format.<br/>
         /// NOTE: only meshes inside this file (and its associate index file) are recognized by Moviestorm at run-time. Cal3D mesh files (.cmf) in the Data folder are ignored (and can be deleted)
         /// </summary>
@@ -97,7 +102,15 @@ namespace MSAddonLib.Domain.Addon
         /// Name of the account of the published
         /// </summary>
         [XmlIgnore]
-        public string Publisher => AddonSignature.Publisher;
+        public string Publisher => !string.IsNullOrEmpty(Notes?.OriginalPublisher) ? Notes.OriginalPublisher : AddonSignature.Publisher;
+
+
+        /// <summary>
+        /// Name of the republisher
+        /// </summary>
+        [XmlIgnore]
+        public string RepublishedBy => !string.IsNullOrEmpty(Notes?.OriginalPublisher) ? AddonSignature.Publisher : null;
+
 
         /// <summary>
         /// Qualified name of the addon
@@ -159,6 +172,13 @@ namespace MSAddonLib.Domain.Addon
         /// Asset manifest contents
         /// </summary>
         public AssetManifest AssetManifest { get; set; }
+
+
+        /// <summary>
+        /// Unofficial notes file
+        /// </summary>
+        public AddonNotes Notes { get; set; }
+
 
         /// <summary>
         /// Size of the mesh data file in megabytes
@@ -464,6 +484,9 @@ namespace MSAddonLib.Domain.Addon
 
             RetrieveVersionInfo();
             RetrievePropertiesInfo();
+            if (contentsSummary.HasNotesFile)
+                RetrieveNotesFile();
+
 
             MeshDataSizeMbytes = GetMeshDataSize();
 
@@ -519,6 +542,7 @@ namespace MSAddonLib.Domain.Addon
 
             return true;
         }
+
 
 
 
@@ -668,6 +692,12 @@ namespace MSAddonLib.Domain.Addon
                 if (filename == ".properties")
                 {
                     result.HasPropertiesFile = true;
+                    continue;
+                }
+
+                if (filename == "notes.txt")
+                {
+                    result.HasNotesFile = true;
                     continue;
                 }
 
@@ -887,6 +917,12 @@ namespace MSAddonLib.Domain.Addon
                 if (filenameLower == "thumbnail.jpg")
                 {
                     result.HasThumbnail = true;
+                    continue;
+                }
+
+                if (filenameLower == "notes.txt")
+                {
+                    result.HasNotesFile = true;
                     continue;
                 }
 
@@ -1304,6 +1340,37 @@ namespace MSAddonLib.Domain.Addon
             }
         }
 
+        // ----------------------------------------------------------------------------------------------------
+
+        private void RetrieveNotesFile()
+        {
+            string notesFullFilename;
+            string notesFileContents = null;
+
+            switch (Source.SourceType)
+            {
+                case AddonPackageSourceType.Archiver:
+                    notesFullFilename = GetArchivedFileFullName(NotesFilename);
+                    if (string.IsNullOrEmpty(notesFullFilename))
+                        return;
+
+                    notesFileContents = Source.Archiver.ExtractArchivedFileToString(notesFullFilename);
+                    break;
+                case AddonPackageSourceType.Folder:
+                    notesFullFilename = Path.Combine(Source.SourcePath, NotesFilename);
+                    if (!File.Exists(notesFullFilename))
+                        return;
+                    notesFileContents = File.ReadAllText(notesFullFilename);
+                    break;
+            }
+
+            if (string.IsNullOrEmpty((notesFileContents = notesFileContents?.Trim())))
+                return;
+
+            string errorText;
+            Notes = AddonNotes.LoadFromString(notesFileContents, out errorText);
+        }
+
 
         // ----------------------------------------------------------------------------------------------------
 
@@ -1508,8 +1575,10 @@ namespace MSAddonLib.Domain.Addon
             }
 
             // summary.AppendLine(string.Format("FriendlyName: {0}", _friendlyName));
-            summary.AppendLine(string.Format("    Publisher: {0}", Publisher));
-            summary.AppendLine(string.Format("    Free: {0}", Free));
+            summary.AppendLine(string.Format($"    Publisher: {Publisher}"));
+            if(!string.IsNullOrEmpty(RepublishedBy))
+                summary.AppendLine(string.Format($"    Republished by: {RepublishedBy}"));
+            summary.AppendLine(string.Format($"    Free: {Free}"));
             if (LastCompiled.HasValue)
                 summary.AppendLine(string.Format($"    Last compiled: {LastCompiled.Value:u}"));
             if (FileSummaryInfo != null)
@@ -1770,6 +1839,8 @@ namespace MSAddonLib.Domain.Addon
         public bool HasPropertiesFile { get; set; }
 
         public bool HasThumbnail { get; set; }
+
+        public bool HasNotesFile { get; set; }
 
         public List<string> DemoMovies { get; set; }
 

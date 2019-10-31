@@ -1,6 +1,11 @@
 
 MSAddonLib - Version History
 --------------------------------
+* v1.8.0 (20191031):
+	AddonNotes: new class for supporting unofficial extra information Notes.txt
+	AddonPackage: new property: 
+
+
 * v1.7.1 (20191027):
 	BodyModelsSummary.ToPrint(): if ((gestureAnimations == 0) && (puppet.OtherAnimations == 0)) don't print
 	Utils: new method HexaBinString()

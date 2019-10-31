@@ -1,5 +1,9 @@
 
 MSAddonLib - TO-DO
 -----------------------
-* Report BodyParts (=> MSAddonLib)
-	Decals Referred count (not in Addon) (BodyModelSumPuppet.DecalsReferenced)
+* Notes.txt: file for extra-official support of:
+	- Original Publisher
+* AddonPackage: new property:
+	RepublishedBy: if exists Original Publisher
+
+
